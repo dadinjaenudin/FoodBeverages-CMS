@@ -36,6 +36,10 @@ urlpatterns = [
     # Store Management
     path('store/', include('core.urls_store')),
     
+    # Product Management
+    path('products/', include('products.urls_product')),
+    path('products/categories/', include('products.urls_category')),
+    
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
