@@ -1,4 +1,5 @@
 <!-- Store Form - Ultra Compact -->
+<!-- DEBUG: Store context = {{ store|yesno:"YES,NO" }} -->
 <form 
     hx-post="{% if store %}{% url 'store:edit' store.pk %}{% else %}{% url 'store:create' %}{% endif %}"
     x-data="{ loading: false }"
