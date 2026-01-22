@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block title %}Stock Movement - F&B HO{% endblock %}
+
+{% block breadcrumb %}
+<nav class="flex" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-2">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-sm text-gray-700 hover:text-blue-600">
+                <i class="fas fa-home mr-1"></i> Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
+                <span class="text-sm font-medium text-gray-900">Stock Movement</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div x-data="{ showModal: false, modalTitle: '', modalUrl: '' }">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-3">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">Stock Movement Report</h1>
+            <p class="text-xs text-gray-600 mt-0.5">View stock movements ({{ total_count }} total) - Read-only, synced from Edge servers</p>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
+        <form method="get" class="flex gap-2" hx-get="{% url 'stockmovement:list' %}" hx-target="#stockmovement-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#store-filter, change from:#type-filter">
+            <div class="flex-1 relative">
+                <input 
+                    type="text" 
+                    name="search" 
+                    id="search-input"
+                    value="{{ search }}"
+                    placeholder="Search by item, reference no..."
+                    class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+            </div>
+            
+            <select 
+                name="store_id" 
+                id="store-filter"
+                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">All Stores</option>
+                {% for store in stores %}
+                <option value="{{ store.id }}" {% if store.id|stringformat:"s" == store_id %}selected{% endif %}>
+                    {{ store.name }} - {{ store.brand.name }}
+                </option>
+                {% endfor %}
+            </select>
+            
+            <select 
+                name="movement_type" 
+                id="type-filter"
+                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">All Types</option>
+                <option value="in" {% if movement_type == 'in' %}selected{% endif %}>Stock In</option>
+                <option value="out" {% if movement_type == 'out' %}selected{% endif %}>Stock Out</option>
+                <option value="adjustment" {% if movement_type == 'adjustment' %}selected{% endif %}>Adjustment</option>
+                <option value="transfer" {% if movement_type == 'transfer' %}selected{% endif %}>Transfer</option>
+                <option value="production" {% if movement_type == 'production' %}selected{% endif %}>Production</option>
+                <option value="waste" {% if movement_type == 'waste' %}selected{% endif %}>Waste</option>
+            </select>
+            
+            <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                <i class="fas fa-search mr-1"></i> Search
+            </button>
+            {% if search or store_id or movement_type %}
+            <a href="{% url 'stockmovement:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+                <i class="fas fa-times mr-1"></i> Clear
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Stock Movement Table -->
+    <div id="stockmovement-table" class="bg-white rounded-lg shadow-sm overflow-hidden">
+        {% include 'inventory/stockmovement/_table.html' %}
+    </div>
+</div>
+{% endblock %}

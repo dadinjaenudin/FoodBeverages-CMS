@@ -50,6 +50,7 @@ urlpatterns = [
     # Inventory Management
     path('inventory/items/', include('inventory.urls_inventoryitem')),
     path('inventory/recipes/', include('inventory.urls_recipe')),
+    path('inventory/movements/', include('inventory.urls_stockmovement')),
     
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

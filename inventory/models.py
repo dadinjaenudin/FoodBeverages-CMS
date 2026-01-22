@@ -149,3 +149,44 @@ class RecipeIngredient(models.Model):
 # Note: InventoryMovement, ManufacturingOrder, StockLocation, etc. 
 # will be managed by Edge Server and synced to HO for reporting
 # HO stores master data only
+
+
+class StockMovement(models.Model):
+    """
+    Stock Movement - Track inventory changes
+    Read-only in HO, synced from Edge servers
+    """
+    MOVEMENT_TYPE_CHOICES = [
+        ('in', 'Stock In'),
+        ('out', 'Stock Out'),
+        ('adjustment', 'Adjustment'),
+        ('transfer', 'Transfer'),
+        ('production', 'Production Use'),
+        ('waste', 'Waste/Spoilage'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    store = models.ForeignKey(Store, on_delete=models.PROTECT, related_name='stock_movements')
+    inventory_item = models.ForeignKey(InventoryItem, on_delete=models.PROTECT, related_name='movements')
+    movement_type = models.CharField(max_length=20, choices=MOVEMENT_TYPE_CHOICES)
+    quantity = models.DecimalField(max_digits=10, decimal_places=3)
+    unit = models.CharField(max_length=20)
+    reference_no = models.CharField(max_length=100, blank=True, help_text="PO/SO/Transfer number")
+    notes = models.TextField(blank=True)
+    movement_date = models.DateTimeField()
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='stock_movements')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'stock_movement'
+        verbose_name = 'Stock Movement'
+        verbose_name_plural = 'Stock Movements'
+        ordering = ['-movement_date']
+        indexes = [
+            models.Index(fields=['store', 'movement_date']),
+            models.Index(fields=['inventory_item', 'movement_date']),
+            models.Index(fields=['movement_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.get_movement_type_display()} - {self.inventory_item.name} ({self.quantity} {self.unit})"
