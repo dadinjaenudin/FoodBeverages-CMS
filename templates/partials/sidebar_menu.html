@@ -157,12 +157,12 @@
             
             <!-- Level 3 -->
             <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
-                <a href="#" 
+                <a href="{% url 'inventoryitem:list' %}" 
                    class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
                     <i class="fas fa-boxes w-4"></i>
                     <span>Raw Materials</span>
                 </a>
-                <a href="#" 
+                <a href="{% url 'recipe:list' %}" 
                    class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
                     <i class="fas fa-book w-4"></i>
                     <span>Recipes (BOM)</span>
