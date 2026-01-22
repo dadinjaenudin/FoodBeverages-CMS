@@ -13,7 +13,7 @@
         <li>
             <div class="flex items-center">
                 <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
-                <span class="text-sm font-medium text-gray-900">Category</span>
+                <span class="text-sm font-medium text-gray-900">Kitchen Station</span>
             </div>
         </li>
     </ol>
@@ -23,7 +23,7 @@
 {% block content %}
 <div x-data="{ 
     showModal: false, 
-    modalTitle: 'Add Category',
+    modalTitle: 'Add Kitchen Station',
     modalUrl: '{% url "kitchenstation:create" %}',
     deleteUrl: '',
     deleteItem: '',
@@ -36,10 +36,10 @@
             <p class="text-xs text-gray-600 mt-0.5">Manage your kitchenstations ({{ total_count }} total)</p>
         </div>
         <button 
-            @click="showModal = true; modalTitle = 'Add Category'; modalUrl = '{% url "kitchenstation:create" %}'"
+            @click="showModal = true; modalTitle = 'Add Kitchen Station'; modalUrl = '{% url "kitchenstation:create" %}'"
             class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
             <i class="fas fa-plus mr-1.5"></i>
-            Add Category
+            Add Kitchen Station
         </button>
     </div>
 
@@ -62,8 +62,8 @@
                 id="brand-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">All Companies</option>
-                {% for brand in companies %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
                     {{ brand.name }}
                 </option>
                 {% endfor %}
@@ -75,7 +75,7 @@
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">All Brands</option>
                 {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
+                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
                     {{ brand.name }}
                 </option>
                 {% endfor %}
@@ -84,7 +84,7 @@
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or selected_brand or selected_brand %}
+            {% if search or brand_id or brand_id %}
             <a href="{% url 'kitchenstation:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
@@ -92,7 +92,7 @@
         </form>
     </div>
 
-    <!-- Category Table -->
+    <!-- Kitchen Station Table -->
     <div id="kitchenstation-table" class="bg-white rounded-lg shadow-sm overflow-hidden">
         {% include 'products/kitchenstation/_table.html' %}
     </div>
@@ -182,7 +182,7 @@
                             <i class="fas fa-exclamation-triangle text-red-600"></i>
                         </div>
                         <div class="ml-3 flex-1">
-                            <h3 class="text-sm font-semibold text-gray-900">Delete Category</h3>
+                            <h3 class="text-sm font-semibold text-gray-900">Delete Kitchen Station</h3>
                             <p class="mt-2 text-xs text-gray-600">
                                 Are you sure you want to delete <strong x-text="deleteItem"></strong>? 
                                 This will also delete all related terminals and transaction data.

@@ -363,12 +363,13 @@ class TableGroupMember(models.Model):
 
 class KitchenStation(models.Model):
     """
-    Kitchen Station - Production areas
+    Kitchen Station - Production areas per Brand
     Example: Main Kitchen, Bar, Dessert
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='kitchen_stations')
     name = models.CharField(max_length=200)
-    code = models.CharField(max_length=20, unique=True)
+    code = models.CharField(max_length=20)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -378,13 +379,14 @@ class KitchenStation(models.Model):
         verbose_name = 'Kitchen Station'
         verbose_name_plural = 'Kitchen Stations'
         ordering = ['name']
+        unique_together = [['brand', 'code']]
         indexes = [
+            models.Index(fields=['brand', 'is_active']),
             models.Index(fields=['code']),
-            models.Index(fields=['is_active']),
         ]
     
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return f"{self.brand.name} - {self.code} - {self.name}"
 
 
 class PrinterConfig(models.Model):
