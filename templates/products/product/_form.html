@@ -1,8 +1,8 @@
-<!-- Product Form - Ultra Compact -->
-<!-- DEBUG: Product context = {{ product|yesno:"YES,NO" }} -->
+<!-- Product Form - Ultra Compact with Image Upload -->
 <form 
     hx-post="{% if product %}{% url 'product:edit' product.pk %}{% else %}{% url 'product:create' %}{% endif %}"
-    x-data="{ loading: false }"
+    hx-encoding="multipart/form-data"
+    x-data="{ loading: false, imagePreviews: [] }"
     @submit="loading = true"
     class="space-y-3">
     {% csrf_token %}
@@ -15,19 +15,24 @@
         </div>
     </div>
     
-    <!-- Brand Selection (only for create) - v2.0 -->
+    <!-- Brand & Category Selection -->
     {% if product %}
-    <!-- Edit mode: Show brand info (read-only) - FIXED -->
-    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg mb-3">
-        <div class="text-xs text-blue-800">
-            <i class="fas fa-info-circle mr-1"></i>
-            <strong>Current Brand:</strong> {{ product.brand.name }} ({{ product.brand.company.name }})
+    <!-- Edit mode: Show brand & category info (read-only) -->
+    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
+        <div class="text-xs text-blue-800 space-y-1">
+            <div>
+                <i class="fas fa-building mr-1"></i>
+                <strong>Brand:</strong> {{ product.brand.name }} ({{ product.brand.company.name }})
+            </div>
+            <div>
+                <i class="fas fa-list mr-1"></i>
+                <strong>Category:</strong> {{ product.category.name }}
+            </div>
         </div>
     </div>
-    <!-- Hidden field to maintain brand association -->
     <input type="hidden" name="brand_id" value="{{ product.brand.id }}">
     {% else %}
-    <!-- Create mode: Show brand dropdown -->
+    <!-- Create mode: Brand dropdown -->
     <div>
         <label for="brand_id" class="block text-xs font-medium text-gray-700 mb-1">
             Brand <span class="text-red-500">*</span>
@@ -45,149 +50,251 @@
     </div>
     {% endif %}
     
-    <!-- Two Column Layout -->
+    <!-- Category -->
+    <div>
+        <label for="category_id" class="block text-xs font-medium text-gray-700 mb-1">
+            Category <span class="text-red-500">*</span>
+        </label>
+        <select 
+            name="category_id" 
+            id="category_id"
+            required
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">Select Category</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}" {% if product and product.category_id == category.id %}selected{% endif %}>
+                {{ category.brand.name }} - {{ category.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <!-- Two Columns: SKU & Name -->
     <div class="grid grid-cols-2 gap-3">
-        <!-- Product Code -->
+        <!-- SKU -->
         <div>
-            <label for="product_code" class="block text-xs font-medium text-gray-700 mb-1">
-                Product Code <span class="text-red-500">*</span>
+            <label for="sku" class="block text-xs font-medium text-gray-700 mb-1">
+                SKU <span class="text-red-500">*</span>
             </label>
             <input 
                 type="text" 
-                name="product_code" 
-                id="product_code"
-                value="{{ product.product_code|default:'' }}"
+                name="sku" 
+                id="sku"
+                value="{{ product.sku|default:'' }}"
                 required
-                maxlength="20"
-                placeholder="e.g., YGY-001-BSD"
+                maxlength="50"
+                placeholder="e.g., F001, D001"
                 class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 {% if product %}readonly{% endif %}>
         </div>
         
         <!-- Product Name -->
         <div>
-            <label for="product_name" class="block text-xs font-medium text-gray-700 mb-1">
+            <label for="name" class="block text-xs font-medium text-gray-700 mb-1">
                 Product Name <span class="text-red-500">*</span>
             </label>
             <input 
                 type="text" 
-                name="product_name" 
-                id="product_name"
-                value="{{ product.product_name|default:'' }}"
+                name="name" 
+                id="name"
+                value="{{ product.name|default:'' }}"
                 required
                 maxlength="200"
-                placeholder="e.g., Cabang BSD"
+                placeholder="e.g., Nasi Goreng Spesial"
                 class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         </div>
     </div>
     
-    <!-- Address -->
+    <!-- Description -->
     <div>
-        <label for="address" class="block text-xs font-medium text-gray-700 mb-1">
-            Address <span class="text-red-500">*</span>
+        <label for="description" class="block text-xs font-medium text-gray-700 mb-1">
+            Description <small class="text-gray-500">(Optional)</small>
         </label>
         <textarea 
-            name="address" 
-            id="address"
+            name="description" 
+            id="description"
             rows="2"
-            required
-            placeholder="Full product address"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ product.address|default:'' }}</textarea>
+            maxlength="500"
+            placeholder="Product description..."
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ product.description|default:'' }}</textarea>
     </div>
     
+    <!-- Two Columns: Price & Cost -->
     <div class="grid grid-cols-2 gap-3">
-        <!-- Phone -->
+        <!-- Price -->
         <div>
-            <label for="phone" class="block text-xs font-medium text-gray-700 mb-1">
-                Phone <span class="text-red-500">*</span>
+            <label for="price" class="block text-xs font-medium text-gray-700 mb-1">
+                Price <span class="text-red-500">*</span>
             </label>
             <input 
-                type="text" 
-                name="phone" 
-                id="phone"
-                value="{{ product.phone|default:'' }}"
+                type="number" 
+                name="price" 
+                id="price"
+                value="{{ product.price|default:'' }}"
                 required
-                maxlength="20"
-                placeholder="e.g., 021-1234567"
+                min="0"
+                step="0.01"
+                placeholder="25000"
                 class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         </div>
         
-        <!-- Timezone -->
+        <!-- Cost -->
         <div>
-            <label for="timezone" class="block text-xs font-medium text-gray-700 mb-1">
-                Timezone
+            <label for="cost" class="block text-xs font-medium text-gray-700 mb-1">
+                Cost <small class="text-gray-500">(for margin calculation)</small>
+            </label>
+            <input 
+                type="number" 
+                name="cost" 
+                id="cost"
+                value="{{ product.cost|default:'' }}"
+                min="0"
+                step="0.01"
+                placeholder="15000"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+    </div>
+    
+    <!-- Two Columns: Printer Target & Sort Order -->
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Printer Target -->
+        <div>
+            <label for="printer_target" class="block text-xs font-medium text-gray-700 mb-1">
+                Printer Target
             </label>
             <select 
-                name="timezone" 
-                id="timezone"
+                name="printer_target" 
+                id="printer_target"
                 class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="Asia/Jakarta" {% if not product or product.timezone == 'Asia/Jakarta' %}selected{% endif %}>Asia/Jakarta (WIB)</option>
-                <option value="Asia/Makassar" {% if product.timezone == 'Asia/Makassar' %}selected{% endif %}>Asia/Makassar (WITA)</option>
-                <option value="Asia/Jayapura" {% if product.timezone == 'Asia/Jayapura' %}selected{% endif %}>Asia/Jayapura (WIT)</option>
+                <option value="kitchen" {% if not product or product.printer_target == 'kitchen' %}selected{% endif %}>Kitchen</option>
+                <option value="bar" {% if product.printer_target == 'bar' %}selected{% endif %}>Bar</option>
+                <option value="dessert" {% if product.printer_target == 'dessert' %}selected{% endif %}>Dessert</option>
             </select>
         </div>
+        
+        <!-- Sort Order -->
+        <div>
+            <label for="sort_order" class="block text-xs font-medium text-gray-700 mb-1">
+                Sort Order
+            </label>
+            <input 
+                type="number" 
+                name="sort_order" 
+                id="sort_order"
+                value="{{ product.sort_order|default:'0' }}"
+                min="0"
+                placeholder="0"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
     </div>
     
-    <!-- GPS Location -->
-    <div class="border-t pt-3">
-        <h4 class="text-xs font-semibold text-gray-900 mb-2">
-            <i class="fas fa-map-marked-alt mr-1"></i>GPS Location (Optional)
-        </h4>
-        
-        <div class="grid grid-cols-2 gap-3">
-            <!-- Latitude -->
-            <div>
-                <label for="latitude" class="block text-xs font-medium text-gray-700 mb-1">
-                    Latitude
-                </label>
-                <input 
-                    type="number" 
-                    name="latitude" 
-                    id="latitude"
-                    value="{{ product.latitude|default:'' }}"
-                    step="0.000001"
-                    min="-90"
-                    max="90"
-                    placeholder="e.g., -6.302395"
-                    class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <p class="mt-0.5 text-xs text-gray-500">-90 to 90</p>
-            </div>
-            
-            <!-- Longitude -->
-            <div>
-                <label for="longitude" class="block text-xs font-medium text-gray-700 mb-1">
-                    Longitude
-                </label>
-                <input 
-                    type="number" 
-                    name="longitude" 
-                    id="longitude"
-                    value="{{ product.longitude|default:'' }}"
-                    step="0.000001"
-                    min="-180"
-                    max="180"
-                    placeholder="e.g., 106.652259"
-                    class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <p class="mt-0.5 text-xs text-gray-500">-180 to 180</p>
-            </div>
+    <!-- Stock Tracking -->
+    <div class="border rounded-lg p-3 bg-gray-50">
+        <div class="flex items-center space-x-2 mb-2">
+            <input 
+                type="checkbox" 
+                name="track_stock" 
+                id="track_stock"
+                {% if product.track_stock %}checked{% endif %}
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <label for="track_stock" class="text-xs font-medium text-gray-700">
+                Track Stock for this Product
+            </label>
         </div>
         
-        <p class="mt-2 text-xs text-gray-500">
-            <i class="fas fa-info-circle mr-1"></i>
-            You can get GPS coordinates from Google Maps. Right-click on location → Click coordinates to copy.
-        </p>
+        <div x-show="document.getElementById('track_stock')?.checked" class="mt-2">
+            <label for="stock_quantity" class="block text-xs font-medium text-gray-700 mb-1">
+                Initial Stock Quantity
+            </label>
+            <input 
+                type="number" 
+                name="stock_quantity" 
+                id="stock_quantity"
+                value="{{ product.stock_quantity|default:'0' }}"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
     </div>
     
-    <!-- Status -->
-    <div class="flex items-center">
+    <!-- Image Upload -->
+    <div class="border-t pt-3">
+        <h4 class="text-xs font-semibold text-gray-900 mb-2">
+            <i class="fas fa-image mr-1"></i>Product Images
+        </h4>
+        
+        {% if product and product.photos.all %}
+        <!-- Existing Images (for Edit mode) -->
+        <div class="mb-3">
+            <p class="text-xs text-gray-600 mb-2">Current Images:</p>
+            <div class="grid grid-cols-4 gap-2">
+                {% for photo in product.photos.all %}
+                <div class="relative group">
+                    <img src="{{ photo.photo.url }}" alt="Product" class="w-full h-20 object-cover rounded border">
+                    {% if photo.is_primary %}
+                    <span class="absolute top-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">Primary</span>
+                    {% endif %}
+                    <button 
+                        type="button"
+                        hx-delete="{% url 'product:photo-delete' photo.pk %}"
+                        hx-confirm="Delete this image?"
+                        class="absolute top-1 right-1 bg-red-600 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition">
+                        <i class="fas fa-times text-xs"></i>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Upload New Images -->
+        <div>
+            <label for="images" class="block text-xs font-medium text-gray-700 mb-1">
+                {% if product %}Add More Images{% else %}Upload Images{% endif %} <small class="text-gray-500">(Multiple files supported)</small>
+            </label>
+            <input 
+                type="file" 
+                name="images" 
+                id="images"
+                multiple
+                accept="image/*"
+                @change="
+                    imagePreviews = [];
+                    for (let file of $event.target.files) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => imagePreviews.push(e.target.result);
+                        reader.readAsDataURL(file);
+                    }
+                "
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">
+                <i class="fas fa-info-circle mr-1"></i>
+                First image will be set as primary. Supported: JPG, PNG (Max 5MB each)
+            </p>
+            
+            <!-- Image Previews -->
+            <div x-show="imagePreviews.length > 0" class="mt-2 grid grid-cols-4 gap-2">
+                <template x-for="(preview, index) in imagePreviews" :key="index">
+                    <div class="relative">
+                        <img :src="preview" class="w-full h-20 object-cover rounded border">
+                        <span x-show="index === 0" class="absolute top-1 left-1 bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded">Primary</span>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Status -->
+    <div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
         <input 
             type="checkbox" 
             name="is_active" 
             id="is_active"
             {% if not product or product.is_active %}checked{% endif %}
             class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-        <label for="is_active" class="ml-2 text-xs font-medium text-gray-700">
-            Active Product
+        <label for="is_active" class="text-xs font-medium text-gray-700">
+            Active
         </label>
     </div>
     
@@ -215,30 +322,28 @@
     </div>
 </form>
 
-{% if product %}
-<script>
-console.log('=== STORE EDIT MODE DEBUG ===');
-console.log('Product exists:', {{ product|yesno:"true,false" }});
-console.log('Product code:', '{{ product.product_code }}');
-console.log('Product name:', '{{ product.product_name }}');
-console.log('Brand name:', '{{ product.brand.name }}');
-console.log('Company name:', '{{ product.brand.company.name }}');
-console.log('=== END DEBUG ===');
-</script>
-{% endif %}
-
 <script>
     document.body.addEventListener('htmx:afterRequest', function(evt) {
         if (evt.detail.target.id === 'modal-content') {
             try {
                 const response = JSON.parse(evt.detail.xhr.response);
                 if (response.success) {
-                    window.location.href = response.redirect;
+                    // Close modal and reload table
+                    document.querySelector('[x-data]').__x.$data.showModal = false;
+                    htmx.trigger('#product-table', 'refresh');
+                    
+                    // Show toast notification
+                    if (typeof showToast !== 'undefined') {
+                        showToast(response.message, 'success');
+                    }
                 } else {
+                    // Show error in form
                     document.getElementById('form-errors').classList.remove('hidden');
                     document.getElementById('error-message').textContent = response.message;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
         }
     });
 </script>
