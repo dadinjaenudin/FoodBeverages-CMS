@@ -1,3 +1,419 @@
-from django.db import models
+"""
+Product Catalog Models
+- Category (hierarchical, brand-scoped)
+- Product (multi-tenant, SKU unique per brand)
+- Modifier & ModifierOption (customization options)
+- ProductPhoto (product images)
+- Table Management (TableArea, Table, TableGroup)
+"""
 
-# Create your models here.
+import uuid
+from django.db import models
+from django.core.validators import MinValueValidator
+from core.models import Brand, User
+
+
+class Category(models.Model):
+    """
+    Product Category - Hierarchical, Brand-scoped
+    Example: Makanan → Ayam → Ayam Geprek
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='categories')
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='children',
+        help_text="Parent category for hierarchical structure"
+    )
+    name = models.CharField(max_length=200)
+    sort_order = models.IntegerField(default=0, help_text="Display order")
+    icon = models.CharField(max_length=100, blank=True, help_text="Icon name or path")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'category'
+        verbose_name = 'Category'
+        verbose_name_plural = 'Categories'
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['parent']),
+        ]
+    
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name} → {self.name}"
+        return self.name
+
+
+class Product(models.Model):
+    """
+    Product/Menu Item - Multi-tenant, SKU unique per brand
+    """
+    PRINTER_TARGET_CHOICES = [
+        ('kitchen', 'Kitchen'),
+        ('bar', 'Bar'),
+        ('dessert', 'Dessert'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='products')
+    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
+    sku = models.CharField(max_length=50, help_text="SKU unique per brand")
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
+    cost = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        help_text="Cost for margin calculation"
+    )
+    printer_target = models.CharField(
+        max_length=20,
+        choices=PRINTER_TARGET_CHOICES,
+        default='kitchen',
+        help_text="Target printer for this product"
+    )
+    track_stock = models.BooleanField(default=False, help_text="Track inventory for this product")
+    stock_quantity = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Current stock quantity (managed by Edge)"
+    )
+    is_active = models.BooleanField(default=True)
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'product'
+        verbose_name = 'Product'
+        verbose_name_plural = 'Products'
+        ordering = ['sort_order', 'name']
+        unique_together = [['brand', 'sku']]
+        indexes = [
+            models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['sku']),
+        ]
+    
+    def __str__(self):
+        return f"{self.sku} - {self.name}"
+    
+    @property
+    def margin(self):
+        """Calculate margin percentage"""
+        if self.price > 0:
+            return ((self.price - self.cost) / self.price) * 100
+        return 0
+
+
+class ProductPhoto(models.Model):
+    """
+    Product Photos - Multiple images per product
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='photos')
+    photo = models.ImageField(upload_to='product_photos/')
+    is_primary = models.BooleanField(default=False, help_text="Primary display photo")
+    sort_order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'product_photo'
+        verbose_name = 'Product Photo'
+        verbose_name_plural = 'Product Photos'
+        ordering = ['sort_order']
+        indexes = [
+            models.Index(fields=['product', 'is_primary']),
+        ]
+    
+    def __str__(self):
+        return f"{self.product.name} - Photo {self.sort_order}"
+
+
+class Modifier(models.Model):
+    """
+    Modifier Group - Customization options (Size, Spice Level, Extras)
+    Example: "Tingkat Kepedasan", "Ukuran", "Topping"
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='modifiers')
+    name = models.CharField(max_length=200, help_text="Modifier group name")
+    is_required = models.BooleanField(
+        default=False,
+        help_text="Customer must select at least one option"
+    )
+    max_selections = models.IntegerField(
+        default=1,
+        validators=[MinValueValidator(0)],
+        help_text="Maximum selections allowed (0 = unlimited)"
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'modifier'
+        verbose_name = 'Modifier'
+        verbose_name_plural = 'Modifiers'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['brand', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return self.name
+
+
+class ModifierOption(models.Model):
+    """
+    Modifier Option - Individual choices within a modifier group
+    Example: "Pedas Level 5", "Size Large", "Extra Cheese"
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    modifier = models.ForeignKey(Modifier, on_delete=models.CASCADE, related_name='options')
+    name = models.CharField(max_length=200)
+    price_adjustment = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Price adjustment (e.g., +5000 for Large)"
+    )
+    is_default = models.BooleanField(default=False, help_text="Default selection")
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'modifier_option'
+        verbose_name = 'Modifier Option'
+        verbose_name_plural = 'Modifier Options'
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['modifier', 'is_active']),
+        ]
+    
+    def __str__(self):
+        if self.price_adjustment != 0:
+            return f"{self.name} (+{self.price_adjustment})"
+        return self.name
+
+
+class ProductModifier(models.Model):
+    """
+    M2M relationship between Product and Modifier
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='product_modifiers')
+    modifier = models.ForeignKey(Modifier, on_delete=models.CASCADE, related_name='product_modifiers')
+    sort_order = models.IntegerField(default=0)
+    
+    class Meta:
+        db_table = 'product_modifier'
+        unique_together = [['product', 'modifier']]
+        ordering = ['sort_order']
+        indexes = [
+            models.Index(fields=['product']),
+            models.Index(fields=['modifier']),
+        ]
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.modifier.name}"
+
+
+# =============================================================================
+# TABLE MANAGEMENT (Dine-In)
+# =============================================================================
+
+class TableArea(models.Model):
+    """
+    Dining Area - Sections in restaurant
+    Example: Indoor, Outdoor, VIP Room
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='table_areas')
+    name = models.CharField(max_length=200)
+    sort_order = models.IntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'table_area'
+        verbose_name = 'Table Area'
+        verbose_name_plural = 'Table Areas'
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['brand', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.brand.name} - {self.name}"
+
+
+class Table(models.Model):
+    """
+    Table - Individual tables in restaurant
+    Status managed by Edge, HO stores template only
+    """
+    STATUS_CHOICES = [
+        ('available', 'Available'),
+        ('occupied', 'Occupied'),
+        ('reserved', 'Reserved'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    area = models.ForeignKey(TableArea, on_delete=models.PROTECT, related_name='tables')
+    number = models.CharField(max_length=20, help_text="Table number (e.g., A1, B5)")
+    capacity = models.IntegerField(validators=[MinValueValidator(1)], help_text="Maximum guests")
+    qr_code = models.CharField(max_length=200, blank=True, help_text="QR code for ordering")
+    
+    # Floor plan positioning
+    pos_x = models.IntegerField(null=True, blank=True, help_text="X position on floor plan")
+    pos_y = models.IntegerField(null=True, blank=True, help_text="Y position on floor plan")
+    
+    # NOTE: status and table_group are managed by Edge, not synced from HO
+    # These fields are for reference only at HO
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='available',
+        help_text="Status managed by Edge"
+    )
+    
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'table'
+        verbose_name = 'Table'
+        verbose_name_plural = 'Tables'
+        ordering = ['area', 'number']
+        indexes = [
+            models.Index(fields=['area', 'is_active']),
+            models.Index(fields=['number']),
+        ]
+    
+    def __str__(self):
+        return f"{self.area.name} - Table {self.number}"
+
+
+class TableGroup(models.Model):
+    """
+    Table Group - For joined tables (managed by Edge)
+    HO stores for reference/reporting only
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='table_groups')
+    main_table = models.ForeignKey(
+        Table,
+        on_delete=models.PROTECT,
+        related_name='main_table_groups',
+        help_text="Primary table in group"
+    )
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='created_table_groups')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'table_group'
+        verbose_name = 'Table Group'
+        verbose_name_plural = 'Table Groups'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['brand', 'created_at']),
+            models.Index(fields=['main_table']),
+        ]
+    
+    def __str__(self):
+        return f"Group {self.id} - {self.main_table}"
+
+
+class TableGroupMember(models.Model):
+    """
+    Tables in a group (M2M)
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    table_group = models.ForeignKey(TableGroup, on_delete=models.CASCADE, related_name='members')
+    table = models.ForeignKey(Table, on_delete=models.PROTECT, related_name='group_memberships')
+    
+    class Meta:
+        db_table = 'table_group_member'
+        unique_together = [['table_group', 'table']]
+        indexes = [
+            models.Index(fields=['table_group']),
+            models.Index(fields=['table']),
+        ]
+    
+    def __str__(self):
+        return f"{self.table_group} - {self.table}"
+
+
+# =============================================================================
+# KITCHEN CONFIGURATION
+# =============================================================================
+
+class KitchenStation(models.Model):
+    """
+    Kitchen Station - Production areas
+    Example: Main Kitchen, Bar, Dessert
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=20, unique=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'kitchen_station'
+        verbose_name = 'Kitchen Station'
+        verbose_name_plural = 'Kitchen Stations'
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['code']),
+            models.Index(fields=['is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class PrinterConfig(models.Model):
+    """
+    Printer Configuration
+    Note: Might be better managed per Edge, not synced from HO
+    """
+    PAPER_WIDTH_CHOICES = [
+        ('58mm', '58mm'),
+        ('80mm', '80mm'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    station = models.ForeignKey(KitchenStation, on_delete=models.PROTECT, related_name='printers')
+    printer_name = models.CharField(max_length=200)
+    ip_address = models.GenericIPAddressField(help_text="Printer IP address")
+    paper_width = models.CharField(max_length=10, choices=PAPER_WIDTH_CHOICES, default='80mm')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'printer_config'
+        verbose_name = 'Printer Config'
+        verbose_name_plural = 'Printer Configs'
+        ordering = ['station', 'printer_name']
+        indexes = [
+            models.Index(fields=['station', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.station.name} - {self.printer_name} ({self.ip_address})"
