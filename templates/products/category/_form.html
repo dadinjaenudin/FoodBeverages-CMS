@@ -1,5 +1,4 @@
 <!-- Category Form - Ultra Compact -->
-<!-- DEBUG: Category context = {{ category|yesno:"YES,NO" }} -->
 <form 
     hx-post="{% if category %}{% url 'category:edit' category.pk %}{% else %}{% url 'category:create' %}{% endif %}"
     x-data="{ loading: false }"
@@ -15,19 +14,18 @@
         </div>
     </div>
     
-    <!-- Brand Selection (only for create) - v2.0 -->
+    <!-- Brand Selection -->
     {% if category %}
-    <!-- Edit mode: Show brand info (read-only) - FIXED -->
-    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg mb-3">
+    <!-- Edit mode: Show brand info (read-only) -->
+    <div class="bg-blue-50 border border-blue-200 px-3 py-2 rounded-lg">
         <div class="text-xs text-blue-800">
             <i class="fas fa-info-circle mr-1"></i>
-            <strong>Current Brand:</strong> {{ category.brand.name }} ({{ category.brand.company.name }})
+            <strong>Brand:</strong> {{ category.brand.name }} ({{ category.brand.company.name }})
         </div>
     </div>
-    <!-- Hidden field to maintain brand association -->
     <input type="hidden" name="brand_id" value="{{ category.brand.id }}">
     {% else %}
-    <!-- Create mode: Show brand dropdown -->
+    <!-- Create mode: Brand dropdown -->
     <div>
         <label for="brand_id" class="block text-xs font-medium text-gray-700 mb-1">
             Brand <span class="text-red-500">*</span>
@@ -36,6 +34,8 @@
             name="brand_id" 
             id="brand_id"
             required
+            x-data="{ selectedBrand: '' }"
+            @change="selectedBrand = $event.target.value"
             class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
             <option value="">Select Brand</option>
             {% for brand in brands %}
@@ -45,149 +45,87 @@
     </div>
     {% endif %}
     
-    <!-- Two Column Layout -->
-    <div class="grid grid-cols-2 gap-3">
-        <!-- Category Code -->
-        <div>
-            <label for="category_code" class="block text-xs font-medium text-gray-700 mb-1">
-                Category Code <span class="text-red-500">*</span>
-            </label>
-            <input 
-                type="text" 
-                name="category_code" 
-                id="category_code"
-                value="{{ category.category_code|default:'' }}"
-                required
-                maxlength="20"
-                placeholder="e.g., YGY-001-BSD"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                {% if category %}readonly{% endif %}>
-        </div>
-        
-        <!-- Category Name -->
-        <div>
-            <label for="category_name" class="block text-xs font-medium text-gray-700 mb-1">
-                Category Name <span class="text-red-500">*</span>
-            </label>
-            <input 
-                type="text" 
-                name="category_name" 
-                id="category_name"
-                value="{{ category.category_name|default:'' }}"
-                required
-                maxlength="200"
-                placeholder="e.g., Cabang BSD"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        </div>
-    </div>
-    
-    <!-- Address -->
+    <!-- Category Name -->
     <div>
-        <label for="address" class="block text-xs font-medium text-gray-700 mb-1">
-            Address <span class="text-red-500">*</span>
+        <label for="name" class="block text-xs font-medium text-gray-700 mb-1">
+            Category Name <span class="text-red-500">*</span>
         </label>
-        <textarea 
-            name="address" 
-            id="address"
-            rows="2"
+        <input 
+            type="text" 
+            name="name" 
+            id="name"
+            value="{{ category.name|default:'' }}"
             required
-            placeholder="Full category address"
-            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ category.address|default:'' }}</textarea>
+            maxlength="200"
+            placeholder="e.g., Makanan, Minuman, Snack"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
     </div>
     
-    <div class="grid grid-cols-2 gap-3">
-        <!-- Phone -->
-        <div>
-            <label for="phone" class="block text-xs font-medium text-gray-700 mb-1">
-                Phone <span class="text-red-500">*</span>
-            </label>
-            <input 
-                type="text" 
-                name="phone" 
-                id="phone"
-                value="{{ category.phone|default:'' }}"
-                required
-                maxlength="20"
-                placeholder="e.g., 021-1234567"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-        </div>
-        
-        <!-- Timezone -->
-        <div>
-            <label for="timezone" class="block text-xs font-medium text-gray-700 mb-1">
-                Timezone
-            </label>
-            <select 
-                name="timezone" 
-                id="timezone"
-                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="Asia/Jakarta" {% if not category or category.timezone == 'Asia/Jakarta' %}selected{% endif %}>Asia/Jakarta (WIB)</option>
-                <option value="Asia/Makassar" {% if category.timezone == 'Asia/Makassar' %}selected{% endif %}>Asia/Makassar (WITA)</option>
-                <option value="Asia/Jayapura" {% if category.timezone == 'Asia/Jayapura' %}selected{% endif %}>Asia/Jayapura (WIT)</option>
-            </select>
-        </div>
-    </div>
-    
-    <!-- GPS Location -->
-    <div class="border-t pt-3">
-        <h4 class="text-xs font-semibold text-gray-900 mb-2">
-            <i class="fas fa-map-marked-alt mr-1"></i>GPS Location (Optional)
-        </h4>
-        
-        <div class="grid grid-cols-2 gap-3">
-            <!-- Latitude -->
-            <div>
-                <label for="latitude" class="block text-xs font-medium text-gray-700 mb-1">
-                    Latitude
-                </label>
-                <input 
-                    type="number" 
-                    name="latitude" 
-                    id="latitude"
-                    value="{{ category.latitude|default:'' }}"
-                    step="0.000001"
-                    min="-90"
-                    max="90"
-                    placeholder="e.g., -6.302395"
-                    class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <p class="mt-0.5 text-xs text-gray-500">-90 to 90</p>
-            </div>
-            
-            <!-- Longitude -->
-            <div>
-                <label for="longitude" class="block text-xs font-medium text-gray-700 mb-1">
-                    Longitude
-                </label>
-                <input 
-                    type="number" 
-                    name="longitude" 
-                    id="longitude"
-                    value="{{ category.longitude|default:'' }}"
-                    step="0.000001"
-                    min="-180"
-                    max="180"
-                    placeholder="e.g., 106.652259"
-                    class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <p class="mt-0.5 text-xs text-gray-500">-180 to 180</p>
-            </div>
-        </div>
-        
-        <p class="mt-2 text-xs text-gray-500">
+    <!-- Parent Category (Optional) -->
+    <div>
+        <label for="parent_id" class="block text-xs font-medium text-gray-700 mb-1">
+            Parent Category <small class="text-gray-500">(Optional)</small>
+        </label>
+        <select 
+            name="parent_id" 
+            id="parent_id"
+            class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <option value="">None (Top Level)</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if category and category.parent_id == cat.id %}selected{% endif %}>
+                {{ cat.name }}
+            </option>
+            {% endfor %}
+        </select>
+        <p class="mt-1 text-xs text-gray-500">
             <i class="fas fa-info-circle mr-1"></i>
-            You can get GPS coordinates from Google Maps. Right-click on location → Click coordinates to copy.
+            For hierarchical structure (e.g., Makanan → Ayam → Ayam Geprek)
         </p>
     </div>
     
-    <!-- Status -->
-    <div class="flex items-center">
+    <!-- Two Columns: Sort Order & Icon -->
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Sort Order -->
+        <div>
+            <label for="sort_order" class="block text-xs font-medium text-gray-700 mb-1">
+                Sort Order
+            </label>
+            <input 
+                type="number" 
+                name="sort_order" 
+                id="sort_order"
+                value="{{ category.sort_order|default:'0' }}"
+                min="0"
+                placeholder="0"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+        
+        <!-- Icon -->
+        <div>
+            <label for="icon" class="block text-xs font-medium text-gray-700 mb-1">
+                Icon <small class="text-gray-500">(Optional)</small>
+            </label>
+            <input 
+                type="text" 
+                name="icon" 
+                id="icon"
+                value="{{ category.icon|default:'' }}"
+                maxlength="100"
+                placeholder="e.g., fa-utensils, fa-coffee"
+                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+    </div>
+    
+    <!-- Active Status -->
+    <div class="flex items-center space-x-2 bg-gray-50 px-3 py-2 rounded-lg">
         <input 
             type="checkbox" 
             name="is_active" 
             id="is_active"
             {% if not category or category.is_active %}checked{% endif %}
             class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
-        <label for="is_active" class="ml-2 text-xs font-medium text-gray-700">
-            Active Category
+        <label for="is_active" class="text-xs font-medium text-gray-700">
+            Active
         </label>
     </div>
     
@@ -215,30 +153,28 @@
     </div>
 </form>
 
-{% if category %}
-<script>
-console.log('=== STORE EDIT MODE DEBUG ===');
-console.log('Category exists:', {{ category|yesno:"true,false" }});
-console.log('Category code:', '{{ category.category_code }}');
-console.log('Category name:', '{{ category.category_name }}');
-console.log('Brand name:', '{{ category.brand.name }}');
-console.log('Company name:', '{{ category.brand.company.name }}');
-console.log('=== END DEBUG ===');
-</script>
-{% endif %}
-
 <script>
     document.body.addEventListener('htmx:afterRequest', function(evt) {
         if (evt.detail.target.id === 'modal-content') {
             try {
                 const response = JSON.parse(evt.detail.xhr.response);
                 if (response.success) {
-                    window.location.href = response.redirect;
+                    // Close modal and reload table
+                    document.querySelector('[x-data]').__x.$data.showModal = false;
+                    htmx.trigger('#category-table', 'refresh');
+                    
+                    // Show toast notification
+                    if (typeof showToast !== 'undefined') {
+                        showToast(response.message, 'success');
+                    }
                 } else {
+                    // Show error in form
                     document.getElementById('form-errors').classList.remove('hidden');
                     document.getElementById('error-message').textContent = response.message;
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.error('Error parsing response:', e);
+            }
         }
     });
 </script>

@@ -60,46 +60,56 @@ def category_list(request):
 
 
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def category_create(request):
     """Create new category"""
-    try:
-        brand_id = request.POST.get('brand_id')
-        name = request.POST.get('name', '').strip()
-        parent_id = request.POST.get('parent_id', '').strip()
-        sort_order = request.POST.get('sort_order', '0')
-        icon = request.POST.get('icon', '').strip()
-        is_active = request.POST.get('is_active') == 'on'
-        
-        if not brand_id or not name:
+    if request.method == 'POST':
+        try:
+            brand_id = request.POST.get('brand_id')
+            name = request.POST.get('name', '').strip()
+            parent_id = request.POST.get('parent_id', '').strip()
+            sort_order = request.POST.get('sort_order', '0')
+            icon = request.POST.get('icon', '').strip()
+            is_active = request.POST.get('is_active') == 'on'
+            
+            if not brand_id or not name:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Brand and Name are required'
+                }, status=400)
+            
+            # Create category
+            category = Category.objects.create(
+                brand_id=brand_id,
+                name=name,
+                parent_id=parent_id if parent_id else None,
+                sort_order=int(sort_order) if sort_order else 0,
+                icon=icon,
+                is_active=is_active
+            )
+            
+            messages.success(request, f'Category "{category.name}" created successfully!')
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Category created successfully',
+                'redirect': '/products/categories/'
+            })
+            
+        except Exception as e:
             return JsonResponse({
                 'success': False,
-                'message': 'Brand and Name are required'
-            }, status=400)
-        
-        # Create category
-        category = Category.objects.create(
-            brand_id=brand_id,
-            name=name,
-            parent_id=parent_id if parent_id else None,
-            sort_order=int(sort_order) if sort_order else 0,
-            icon=icon,
-            is_active=is_active
-        )
-        
-        messages.success(request, f'Category "{category.name}" created successfully!')
-        
-        return JsonResponse({
-            'success': True,
-            'message': 'Category created successfully',
-            'redirect': '/products/categories/'
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'message': str(e)
-        }, status=500)
+                'message': str(e)
+            }, status=500)
+    
+    # GET request - return form
+    brands = Brand.objects.filter(is_active=True).order_by('name')
+    categories = Category.objects.none()  # Empty queryset for create mode
+    
+    return render(request, 'products/category/_form.html', {
+        'brands': brands,
+        'categories': categories
+    })
 
 
 @login_required
