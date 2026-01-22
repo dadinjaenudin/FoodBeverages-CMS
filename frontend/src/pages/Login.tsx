@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface LoginProps {
   onLogin: () => void;
@@ -23,7 +23,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       const endpoint = isRegister ? '/users/register' : '/users/login';
       const data = isRegister ? formData : { email: formData.email, password: formData.password };
       
-      const response = await axios.post(`http://localhost:5000/api${endpoint}`, data);
+      const response = await api.post(endpoint, data);
       
       localStorage.setItem('token', response.data.token);
       onLogin();
