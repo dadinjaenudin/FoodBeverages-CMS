@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: foodbeverages-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - foodbeverages-network
+
+  backend:
+    build: ./backend
+    container_name: foodbeverages-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/foodbeverages-cms
+      - JWT_SECRET=your-secret-key-change-in-production
+      - NODE_ENV=production
+    depends_on:
+      - mongodb
+    networks:
+      - foodbeverages-network
+
+  frontend:
+    build: ./frontend
+    container_name: foodbeverages-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - foodbeverages-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  foodbeverages-network:
+    driver: bridge
