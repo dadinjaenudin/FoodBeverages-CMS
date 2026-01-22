@@ -1,4 +1,254 @@
-<!-- Inventory Item Form Placeholder -->
-<div class="p-4">
-    <p class="text-gray-600">Inventory Item Form - Under Construction</p>
-</div>
+<!-- Inventory Item Form -->
+<form 
+    hx-post="{% if item %}{% url 'inventoryitem:edit' item.pk %}{% else %}{% url 'inventoryitem:create' %}{% endif %}"
+    hx-target="#modal-content"
+    hx-swap="innerHTML"
+    class="space-y-4"
+    x-data="{ submitting: false }"
+    @submit="submitting = true">
+    {% csrf_token %}
+    
+    <!-- Error Container -->
+    <div id="form-errors" class="hidden p-3 text-sm text-red-700 bg-red-100 border border-red-400 rounded" role="alert"></div>
+    
+    <!-- Brand (Read-only when editing) -->
+    {% if item %}
+        <div>
+            <label class="block mb-1 text-sm font-medium text-gray-700">Brand</label>
+            <div class="px-3 py-2 text-sm text-gray-700 bg-gray-50 border border-gray-300 rounded-lg">
+                {{ item.brand.name }} ({{ item.brand.company.name }})
+            </div>
+            <input type="hidden" name="brand_id" value="{{ item.brand.id }}">
+        </div>
+    {% else %}
+        <div>
+            <label for="brand_id" class="block mb-1 text-sm font-medium text-gray-700">
+                Brand <span class="text-red-500">*</span>
+            </label>
+            <select 
+                id="brand_id" 
+                name="brand_id" 
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">-- Select Brand --</option>
+                {% for brand in brands %}
+                    <option value="{{ brand.id }}">{{ brand.name }} - {{ brand.company.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    {% endif %}
+    
+    <!-- Item Code -->
+    <div>
+        <label for="item_code" class="block mb-1 text-sm font-medium text-gray-700">
+            Item Code <span class="text-red-500">*</span>
+        </label>
+        <input 
+            type="text" 
+            id="item_code" 
+            name="item_code" 
+            value="{{ item.item_code|default:'' }}"
+            required
+            maxlength="50"
+            placeholder="e.g., RM-CHICKEN-001, PKG-CUP-001"
+            class="w-full px-3 py-2 text-sm font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase">
+        <p class="mt-1 text-xs text-gray-500">Must be unique per brand</p>
+    </div>
+    
+    <!-- Item Name -->
+    <div>
+        <label for="name" class="block mb-1 text-sm font-medium text-gray-700">
+            Item Name <span class="text-red-500">*</span>
+        </label>
+        <input 
+            type="text" 
+            id="name" 
+            name="name" 
+            value="{{ item.name|default:'' }}"
+            required
+            maxlength="200"
+            placeholder="e.g., Chicken Breast, Cooking Oil, Paper Cup"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+    </div>
+    
+    <!-- Item Type & Base Unit -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- Item Type -->
+        <div>
+            <label for="item_type" class="block mb-1 text-sm font-medium text-gray-700">
+                Item Type <span class="text-red-500">*</span>
+            </label>
+            <select 
+                id="item_type" 
+                name="item_type" 
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">-- Select Type --</option>
+                <option value="raw_material" {% if item.item_type == 'raw_material' %}selected{% endif %}>Raw Material</option>
+                <option value="semi_finished" {% if item.item_type == 'semi_finished' %}selected{% endif %}>Semi-Finished</option>
+                <option value="finished_goods" {% if item.item_type == 'finished_goods' %}selected{% endif %}>Finished Goods</option>
+                <option value="packaging" {% if item.item_type == 'packaging' %}selected{% endif %}>Packaging</option>
+            </select>
+        </div>
+        
+        <!-- Base Unit -->
+        <div>
+            <label for="base_unit" class="block mb-1 text-sm font-medium text-gray-700">
+                Base Unit <span class="text-red-500">*</span>
+            </label>
+            <select 
+                id="base_unit" 
+                name="base_unit" 
+                required
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">-- Select Unit --</option>
+                <option value="kg" {% if item.base_unit == 'kg' %}selected{% endif %}>Kilogram (kg)</option>
+                <option value="gram" {% if item.base_unit == 'gram' %}selected{% endif %}>Gram (g)</option>
+                <option value="liter" {% if item.base_unit == 'liter' %}selected{% endif %}>Liter (L)</option>
+                <option value="ml" {% if item.base_unit == 'ml' %}selected{% endif %}>Milliliter (mL)</option>
+                <option value="pcs" {% if item.base_unit == 'pcs' %}selected{% endif %}>Pieces (pcs)</option>
+            </select>
+        </div>
+    </div>
+    
+    <!-- Cost per Unit -->
+    <div>
+        <label for="cost_per_unit" class="block mb-1 text-sm font-medium text-gray-700">
+            Cost per Unit (Rp)
+        </label>
+        <input 
+            type="number" 
+            id="cost_per_unit" 
+            name="cost_per_unit" 
+            value="{{ item.cost_per_unit|default:0 }}"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <p class="mt-1 text-xs text-gray-500">Purchase cost per base unit</p>
+    </div>
+    
+    <!-- Stock Levels -->
+    <div class="grid grid-cols-2 gap-4">
+        <!-- Min Stock -->
+        <div>
+            <label for="min_stock" class="block mb-1 text-sm font-medium text-gray-700">
+                Min Stock
+            </label>
+            <input 
+                type="number" 
+                id="min_stock" 
+                name="min_stock" 
+                value="{{ item.min_stock|default:0 }}"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">Reorder level</p>
+        </div>
+        
+        <!-- Max Stock -->
+        <div>
+            <label for="max_stock" class="block mb-1 text-sm font-medium text-gray-700">
+                Max Stock
+            </label>
+            <input 
+                type="number" 
+                id="max_stock" 
+                name="max_stock" 
+                value="{{ item.max_stock|default:0 }}"
+                min="0"
+                step="0.01"
+                placeholder="0"
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <p class="mt-1 text-xs text-gray-500">Maximum storage</p>
+        </div>
+    </div>
+    
+    <!-- Description -->
+    <div>
+        <label for="description" class="block mb-1 text-sm font-medium text-gray-700">
+            Description
+        </label>
+        <textarea 
+            id="description" 
+            name="description" 
+            rows="3"
+            placeholder="Additional notes about this inventory item..."
+            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ item.description|default:'' }}</textarea>
+    </div>
+    
+    <!-- Checkboxes -->
+    <div class="space-y-2">
+        <div class="flex items-center">
+            <input 
+                type="checkbox" 
+                id="track_stock" 
+                name="track_stock" 
+                value="1"
+                {% if not item or item.track_stock %}checked{% endif %}
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <label for="track_stock" class="ml-2 text-sm font-medium text-gray-700">
+                Track Stock (enable inventory tracking)
+            </label>
+        </div>
+        
+        <div class="flex items-center">
+            <input 
+                type="checkbox" 
+                id="is_active" 
+                name="is_active" 
+                value="1"
+                {% if not item or item.is_active %}checked{% endif %}
+                class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <label for="is_active" class="ml-2 text-sm font-medium text-gray-700">
+                Active (item is available for use)
+            </label>
+        </div>
+    </div>
+    
+    <!-- Form Actions -->
+    <div class="flex justify-end gap-2 pt-4 border-t">
+        <button 
+            type="button"
+            @click="$dispatch('close-modal')"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+        </button>
+        <button 
+            type="submit"
+            :disabled="submitting"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <span x-show="!submitting">{% if item %}Update{% else %}Create{% endif %}</span>
+            <span x-show="submitting" class="flex items-center">
+                <svg class="w-4 h-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+            </span>
+        </button>
+    </div>
+</form>
+
+<script>
+// Handle form submission response
+document.getElementById('modal-content').addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.successful) {
+        const response = JSON.parse(event.detail.xhr.response);
+        if (response.success) {
+            // Close modal
+            document.dispatchEvent(new CustomEvent('close-modal'));
+            // Trigger table refresh
+            htmx.trigger('#inventoryitem-table', 'refresh');
+            // Show success message
+            window.showToast(response.message, 'success');
+        } else {
+            // Show error in form
+            const errorDiv = document.getElementById('form-errors');
+            errorDiv.textContent = response.message;
+            errorDiv.classList.remove('hidden');
+        }
+    }
+});
+</script>

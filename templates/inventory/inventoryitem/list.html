@@ -33,7 +33,7 @@
     <div class="flex justify-between items-center mb-3">
         <div>
             <h1 class="text-xl font-bold text-gray-900">Raw Material Management</h1>
-            <p class="text-xs text-gray-600 mt-0.5">Manage your inventoryitems ({{ total_count }} total)</p>
+            <p class="text-xs text-gray-600 mt-0.5">Manage your inventory items ({{ total_count }} total)</p>
         </div>
         <button 
             @click="showModal = true; modalTitle = 'Add Raw Material'; modalUrl = '{% url "inventoryitem:create" %}'"
@@ -45,7 +45,7 @@
 
     <!-- Filters - Compact -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'inventoryitem:list' %}" hx-target="#inventoryitem-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#company-filter, change from:#promo-type-filter">
+        <form method="get" class="flex gap-2" hx-get="{% url 'inventoryitem:list' %}" hx-target="#inventoryitem-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#brand-filter, change from:#item-type-filter">
             <div class="flex-1 relative">
                 <input 
                     type="text" 
@@ -58,35 +58,32 @@
             </div>
             
             <select 
-                name="company_id" 
-                id="company-filter"
+                name="brand_id" 
+                id="brand-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Companies</option>
-                {% for company in companies %}
-                <option value="{{ company.id }}" {% if company.id|stringformat:"s" == company_id %}selected{% endif %}>
-                    {{ company.name }}
+                <option value="">All Brands</option>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
+                    {{ brand.name }} - {{ brand.company.name }}
                 </option>
                 {% endfor %}
             </select>
             
             <select 
-                name="promo_type" 
-                id="promo-type-filter"
+                name="item_type" 
+                id="item-type-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="">All Types</option>
-                <option value="percent_discount" {% if promo_type == 'percent_discount' %}selected{% endif %}>Percent Discount</option>
-                <option value="amount_discount" {% if promo_type == 'amount_discount' %}selected{% endif %}>Amount Discount</option>
-                <option value="buy_x_get_y" {% if promo_type == 'buy_x_get_y' %}selected{% endif %}>BOGO</option>
-                <option value="cashback" {% if promo_type == 'cashback' %}selected{% endif %}>Cashback</option>
-                <option value="happy_hour" {% if promo_type == 'happy_hour' %}selected{% endif %}>Happy Hour</option>
-                <option value="combo" {% if promo_type == 'combo' %}selected{% endif %}>Combo</option>
-                <option value="payment_discount" {% if promo_type == 'payment_discount' %}selected{% endif %}>Payment</option>
+                <option value="raw_material" {% if item_type == 'raw_material' %}selected{% endif %}>Raw Material</option>
+                <option value="semi_finished" {% if item_type == 'semi_finished' %}selected{% endif %}>Semi-Finished</option>
+                <option value="finished_goods" {% if item_type == 'finished_goods' %}selected{% endif %}>Finished Goods</option>
+                <option value="packaging" {% if item_type == 'packaging' %}selected{% endif %}>Packaging</option>
             </select>
             
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or company_id or promo_type %}
+            {% if search or brand_id or item_type %}
             <a href="{% url 'inventoryitem:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
@@ -96,7 +93,7 @@
 
     <!-- Raw Material Table -->
     <div id="inventoryitem-table" class="bg-white rounded-lg shadow-sm overflow-hidden">
-        {% include 'inventoryitems/inventoryitem/_table.html' %}
+        {% include 'inventory/inventoryitem/_table.html' %}
     </div>
 
     <!-- Add/Edit Modal -->

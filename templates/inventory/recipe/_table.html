@@ -1,5 +1,149 @@
-<!-- Recipe Table Placeholder -->
-<div class="p-4 text-center">
-    <p class="text-gray-600">Recipe Table - Under Construction</p>
-    <p class="text-sm text-gray-500">{{ recipes.count }} recipes found</p>
+<!-- Recipe Table -->
+<div class="overflow-x-auto">
+    <table class="min-w-full border-collapse border border-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Recipe Code</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Recipe Name</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Product</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Version</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Yield</th>
+                <th class="px-3 py-2 text-xs font-semibold text-left text-gray-700 border border-gray-200">Prep Type</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Effective Date</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Status</th>
+                <th class="px-3 py-2 text-xs font-semibold text-center text-gray-700 border border-gray-200">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white">
+            {% for recipe in recipes %}
+            <tr class="hover:bg-gray-50">
+                <!-- Recipe Code -->
+                <td class="px-3 py-2 text-xs text-gray-900 border border-gray-200">
+                    <div class="font-mono font-semibold">{{ recipe.recipe_code }}</div>
+                </td>
+                
+                <!-- Recipe Name & Brand -->
+                <td class="px-3 py-2 text-xs text-gray-900 border border-gray-200">
+                    <div class="font-semibold">{{ recipe.recipe_name }}</div>
+                    <div class="text-gray-500">{{ recipe.brand.name }}</div>
+                </td>
+                
+                <!-- Product -->
+                <td class="px-3 py-2 text-xs border border-gray-200">
+                    <div class="font-semibold text-gray-900">{{ recipe.product.name }}</div>
+                    <div class="text-gray-500">{{ recipe.product.sku }}</div>
+                </td>
+                
+                <!-- Version -->
+                <td class="px-3 py-2 text-center border border-gray-200">
+                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">v{{ recipe.version }}</span>
+                </td>
+                
+                <!-- Yield -->
+                <td class="px-3 py-2 text-xs text-gray-700 border border-gray-200">
+                    <span class="font-semibold">{{ recipe.yield_quantity|floatformat:2 }}</span> {{ recipe.yield_unit }}
+                </td>
+                
+                <!-- Preparation Type -->
+                <td class="px-3 py-2 text-xs border border-gray-200">
+                    {% if recipe.preparation_type == 'prep' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Preparation</span>
+                    {% elif recipe.preparation_type == 'cook' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-orange-100 text-orange-800">Cooking</span>
+                    {% elif recipe.preparation_type == 'fry' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Frying</span>
+                    {% elif recipe.preparation_type == 'assemble' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Assembly</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">{{ recipe.get_preparation_type_display }}</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Effective Date -->
+                <td class="px-3 py-2 text-xs text-center text-gray-600 border border-gray-200">
+                    <div>{{ recipe.effective_date|date:"d M Y" }}</div>
+                    {% if recipe.end_date %}
+                        <div class="text-gray-400">to {{ recipe.end_date|date:"d M Y" }}</div>
+                    {% endif %}
+                </td>
+                
+                <!-- Status -->
+                <td class="px-3 py-2 text-center border border-gray-200">
+                    {% if recipe.is_active %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Actions -->
+                <td class="px-3 py-2 text-center border border-gray-200">
+                    <div class="flex items-center justify-center gap-2">
+                        <button
+                            @click="modalTitle = 'Edit Recipe'; modalUrl = '{% url 'recipe:edit' recipe.pk %}'; showModal = true"
+                            class="text-blue-600 hover:text-blue-800"
+                            title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </button>
+                        <button
+                            @click="deleteUrl = '{% url 'recipe:delete' recipe.pk %}'; deleteItem = '{{ recipe.recipe_name }}'; showDeleteConfirm = true"
+                            class="text-red-600 hover:text-red-800"
+                            title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" class="px-6 py-12 text-center text-gray-500 border border-gray-200">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-12 h-12 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        <p class="text-sm">No recipes found</p>
+                        <p class="text-xs text-gray-400">Click "Add Recipe" to create your first recipe</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+    <div class="text-sm text-gray-700">
+        Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }} ({{ page_obj.paginator.count }} total recipes)
+    </div>
+    <div class="flex gap-1">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.brand_id %}&brand_id={{ request.GET.brand_id }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">First</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.brand_id %}&brand_id={{ request.GET.brand_id }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Previous</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="px-3 py-1 text-sm text-white bg-blue-600 border border-blue-600 rounded">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.brand_id %}&brand_id={{ request.GET.brand_id }}{% endif %}"
+                   class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.brand_id %}&brand_id={{ request.GET.brand_id }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next</a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.brand_id %}&brand_id={{ request.GET.brand_id }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Last</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

@@ -4,14 +4,14 @@
 
 {% block breadcrumb %}
 <nav class="flex" aria-label="Breadcrumb">
-    <ol class="inline-flex recipes-center space-x-1 md:space-x-2">
-        <li class="inline-flex recipes-center">
+    <ol class="inline-flex items-center space-x-1 md:space-x-2">
+        <li class="inline-flex items-center">
             <a href="{% url 'dashboard:index' %}" class="text-sm text-gray-700 hover:text-blue-600">
                 <i class="fas fa-home mr-1"></i> Dashboard
             </a>
         </li>
         <li>
-            <div class="flex recipes-center">
+            <div class="flex items-center">
                 <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
                 <span class="text-sm font-medium text-gray-900">Recipe</span>
             </div>
@@ -30,14 +30,14 @@
     showDeleteConfirm: false
 }">
     <!-- Header - Compact -->
-    <div class="flex justify-between recipes-center mb-3">
+    <div class="flex justify-between items-center mb-3">
         <div>
             <h1 class="text-xl font-bold text-gray-900">Recipe Management</h1>
             <p class="text-xs text-gray-600 mt-0.5">Manage your recipes ({{ total_count }} total)</p>
         </div>
         <button 
             @click="showModal = true; modalTitle = 'Add Recipe'; modalUrl = '{% url "recipe:create" %}'"
-            class="inline-flex recipes-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+            class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
             <i class="fas fa-plus mr-1.5"></i>
             Add Recipe
         </button>
@@ -45,7 +45,7 @@
 
     <!-- Filters - Compact -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'recipe:list' %}" hx-target="#recipe-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#company-filter, change from:#promo-type-filter">
+        <form method="get" class="flex gap-2" hx-get="{% url 'recipe:list' %}" hx-target="#recipe-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#brand-filter">
             <div class="flex-1 relative">
                 <input 
                     type="text" 
@@ -58,35 +58,21 @@
             </div>
             
             <select 
-                name="company_id" 
-                id="company-filter"
+                name="brand_id" 
+                id="brand-filter"
                 class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Companies</option>
-                {% for company in companies %}
-                <option value="{{ company.id }}" {% if company.id|stringformat:"s" == company_id %}selected{% endif %}>
-                    {{ company.name }}
+                <option value="">All Brands</option>
+                {% for brand in brands %}
+                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
+                    {{ brand.name }} - {{ brand.company.name }}
                 </option>
                 {% endfor %}
-            </select>
-            
-            <select 
-                name="promo_type" 
-                id="promo-type-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Types</option>
-                <option value="percent_discount" {% if promo_type == 'percent_discount' %}selected{% endif %}>Percent Discount</option>
-                <option value="amount_discount" {% if promo_type == 'amount_discount' %}selected{% endif %}>Amount Discount</option>
-                <option value="buy_x_get_y" {% if promo_type == 'buy_x_get_y' %}selected{% endif %}>BOGO</option>
-                <option value="cashback" {% if promo_type == 'cashback' %}selected{% endif %}>Cashback</option>
-                <option value="happy_hour" {% if promo_type == 'happy_hour' %}selected{% endif %}>Happy Hour</option>
-                <option value="combo" {% if promo_type == 'combo' %}selected{% endif %}>Combo</option>
-                <option value="payment_discount" {% if promo_type == 'payment_discount' %}selected{% endif %}>Payment</option>
             </select>
             
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or company_id or promo_type %}
+            {% if search or brand_id %}
             <a href="{% url 'recipe:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
@@ -96,7 +82,7 @@
 
     <!-- Recipe Table -->
     <div id="recipe-table" class="bg-white rounded-lg shadow-sm overflow-hidden">
-        {% include 'recipes/recipe/_table.html' %}
+        {% include 'inventory/recipe/_table.html' %}
     </div>
 
     <!-- Add/Edit Modal -->
