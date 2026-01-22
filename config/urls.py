@@ -33,6 +33,9 @@ urlpatterns = [
     # Brand Management
     path('brand/', include('core.urls_brand')),
     
+    # Store Management
+    path('store/', include('core.urls_store')),
+    
     # JWT Authentication
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
