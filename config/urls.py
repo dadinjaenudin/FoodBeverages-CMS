@@ -16,7 +16,13 @@ urlpatterns = [
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     
-    # API Endpoints (for Edge Sync)
+    # API Endpoints - HO → Edge (Master Data Pull)
     path('api/v1/core/', include('core.api.urls')),
-    # TODO: Add other app APIs (products, members, promotions, inventory)
+    path('api/v1/products/', include('products.api.urls')),
+    path('api/v1/members/', include('members.api.urls')),
+    path('api/v1/promotions/', include('promotions.api.urls')),
+    path('api/v1/inventory/', include('inventory.api.urls')),
+    
+    # API Endpoints - Edge → HO (Transaction Push)
+    path('api/v1/transactions/', include('transactions.api.urls')),
 ]
