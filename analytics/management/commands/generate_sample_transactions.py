@@ -3,13 +3,13 @@ Management command to generate sample transaction data for testing reports
 """
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from datetime import timedelta, datetime
+from datetime import timedelta
 from decimal import Decimal
 import random
 import uuid
 
 from core.models import Company, Brand, Store, User
-from products.models import Product, Category
+from products.models import Product
 from members.models import Member
 from transactions.models import Bill, BillItem, Payment
 
@@ -68,7 +68,7 @@ class Command(BaseCommand):
         members = list(Member.objects.filter(company=company, is_active=True))
         
         self.stdout.write(f'Using Store: {store.store_name}')
-        self.stdout.write(f'Using Brand: {brand.brand_name}')
+        self.stdout.write(f'Using Brand: {brand.name}')
         self.stdout.write(f'Products available: {len(products)}')
         self.stdout.write(f'Members available: {len(members)}\n')
         
@@ -89,148 +89,141 @@ class Command(BaseCommand):
         start_date = end_date - timedelta(days=days)
         
         current_date = start_date
+        day_count = 0
         
         while current_date <= end_date:
+            day_count += 1
             # Randomize number of bills per day (±30%)
             daily_bills = int(bills_per_day * random.uniform(0.7, 1.3))
+            
+            daily_revenue = Decimal('0.00')
             
             for _ in range(daily_bills):
                 # Generate random time within business hours (10:00-22:00)
                 hour = random.randint(10, 21)
                 minute = random.randint(0, 59)
-                bill_datetime = current_date.replace(hour=hour, minute=minute, second=0)
+                second = random.randint(0, 59)
                 
-                # Random customer count
-                customer_count = random.randint(1, 6)
-                
-                # Create bill
-                bill_number = f"BILL-{current_date.strftime('%Y%m%d')}-{str(uuid.uuid4())[:8].upper()}"
+                bill_datetime = current_date.replace(
+                    hour=hour,
+                    minute=minute,
+                    second=second,
+                    microsecond=0
+                )
                 
                 # Random member (30% chance)
                 member = random.choice(members) if members and random.random() < 0.3 else None
                 
-                bill = Bill.objects.create(
-                    company=company,
-                    brand=brand,
-                    store=store,
-                    bill_number=bill_number,
-                    bill_date=bill_datetime,
-                    customer_count=customer_count,
-                    member=member,
-                    order_type='DINE_IN' if random.random() < 0.7 else random.choice(['TAKEAWAY', 'DELIVERY']),
-                    table_number=f"T{random.randint(1, 20)}" if random.random() < 0.7 else None,
-                    status='PAID',
-                    subtotal=Decimal('0.00'),
-                    tax_amount=Decimal('0.00'),
-                    service_charge=Decimal('0.00'),
-                    discount_amount=Decimal('0.00'),
-                    total_amount=Decimal('0.00'),
-                    created_by=user,
-                    created_at=bill_datetime,
-                    updated_at=bill_datetime
-                )
-                
-                # Add 1-5 items per bill
+                # Random number of items (1-5)
                 num_items = random.randint(1, 5)
                 selected_products = random.sample(products, min(num_items, len(products)))
                 
+                # Calculate bill totals
                 subtotal = Decimal('0.00')
-                
                 for product in selected_products:
                     quantity = random.randint(1, 3)
-                    unit_price = product.base_price
-                    item_subtotal = unit_price * quantity
-                    
-                    # Random unit cost (60-80% of price)
-                    unit_cost = unit_price * Decimal(str(random.uniform(0.6, 0.8)))
-                    
-                    BillItem.objects.create(
-                        bill=bill,
-                        company=company,
-                        brand=brand,
-                        product=product,
-                        product_sku=product.product_code,
-                        product_name=product.product_name,
-                        category=product.category,
-                        quantity=quantity,
-                        unit_price=unit_price,
-                        unit_cost=unit_cost,
-                        subtotal=item_subtotal,
-                        discount_amount=Decimal('0.00'),
-                        total=item_subtotal,
-                        is_void=False,
+                    subtotal += product.price * quantity
+                
+                # Apply random discount (0-20%)
+                discount_percent = random.choice([0, 0, 0, 5, 10, 15, 20])  # More likely to have no discount
+                discount_amount = subtotal * Decimal(discount_percent) / Decimal(100)
+                
+                after_discount = subtotal - discount_amount
+                
+                # Tax (10%)
+                tax_rate = Decimal('10.00')
+                tax_amount = after_discount * tax_rate / Decimal(100)
+                
+                # Service charge (5%)
+                service_charge_rate = Decimal('5.00')
+                service_charge = after_discount * service_charge_rate / Decimal(100)
+                
+                total = after_discount + tax_amount + service_charge
+                
+                # Create Bill
+                bill_number = f'TRX-{day_count:04d}-{total_bills_created:05d}'
+                terminal_uuid = str(uuid.uuid4())  # Generate UUID for terminal
+                
+                try:
+                    bill = Bill.objects.create(
+                        company_id=company.id,
+                        brand_id=brand.id,
+                        store_id=store.id,
+                        terminal_id=terminal_uuid,
+                        bill_number=bill_number,
+                        bill_type='DINE_IN' if random.random() < 0.7 else 'TAKEAWAY',
+                        status='PAID',
+                        pax=random.randint(1, 6),
+                        member_id=member.id if member else None,
+                        member_code=member.member_code if member else None,
+                        subtotal=subtotal,
+                        tax_rate=tax_rate,
+                        tax_amount=tax_amount,
+                        service_charge_rate=service_charge_rate,
+                        service_charge=service_charge,
+                        discount_amount=discount_amount,
+                        total=total,
+                        created_by=user.id,
                         created_at=bill_datetime,
-                        updated_at=bill_datetime
+                        closed_by=user.id,
+                        closed_at=bill_datetime
                     )
                     
-                    subtotal += item_subtotal
-                
-                # Calculate totals
-                tax_rate = Decimal('0.10')  # 10% tax
-                service_rate = Decimal('0.05')  # 5% service
-                
-                tax_amount = subtotal * tax_rate
-                service_charge = subtotal * service_rate
-                
-                # Random discount (10% chance)
-                discount_amount = Decimal('0.00')
-                if random.random() < 0.1:
-                    discount_amount = subtotal * Decimal(str(random.uniform(0.05, 0.20)))
-                
-                total_amount = subtotal + tax_amount + service_charge - discount_amount
-                
-                # Update bill
-                bill.subtotal = subtotal
-                bill.tax_amount = tax_amount
-                bill.service_charge = service_charge
-                bill.discount_amount = discount_amount
-                bill.total_amount = total_amount
-                bill.save()
-                
-                # Create payment
-                payment_method = random.choices(
-                    [p[0] for p in payment_methods],
-                    weights=[p[1] for p in payment_methods]
-                )[0]
-                
-                Payment.objects.create(
-                    bill=bill,
-                    payment_method=payment_method,
-                    amount=total_amount,
-                    status='SUCCESS',
-                    reference_no=f"PAY-{uuid.uuid4().hex[:12].upper()}",
-                    created_at=bill_datetime,
-                    updated_at=bill_datetime
-                )
-                
-                total_bills_created += 1
-                total_revenue += total_amount
+                    # Create Bill Items
+                    for product in selected_products:
+                        quantity = random.randint(1, 3)
+                        unit_price = product.price
+                        item_subtotal = unit_price * quantity
+                        
+                        BillItem.objects.create(
+                            bill=bill,
+                            product_id=product.id,
+                            product_sku=product.sku,
+                            product_name=product.name,
+                            quantity=quantity,
+                            unit_price=unit_price,
+                            unit_cost=product.cost,
+                            subtotal=item_subtotal,
+                            is_void=False,
+                            created_by=user.id
+                        )
+                    
+                    # Create Payment
+                    payment_method = random.choices(
+                        [pm[0] for pm in payment_methods],
+                        weights=[pm[1] for pm in payment_methods]
+                    )[0]
+                    
+                    Payment.objects.create(
+                        bill=bill,
+                        payment_method=payment_method,
+                        amount=total,
+                        status='SUCCESS',
+                        created_by=user.id
+                    )
+                    
+                    total_bills_created += 1
+                    daily_revenue += total
+                    total_revenue += total
+                    
+                except Exception as e:
+                    self.stdout.write(self.style.ERROR(f'Error creating bill: {e}'))
+                    continue
             
             # Progress indicator
-            if current_date.day == 1 or current_date == start_date:
-                self.stdout.write(f'  Generating {current_date.strftime("%B %Y")}...')
+            if day_count % 5 == 0:
+                self.stdout.write(
+                    f'Day {day_count}/{days} - Generated {daily_bills} bills - '
+                    f'Daily Revenue: Rp {daily_revenue:,.0f}'
+                )
             
             current_date += timedelta(days=1)
         
-        self.stdout.write('\n' + '='*60)
-        self.stdout.write(self.style.SUCCESS('✓ Sample Transaction Data Generated!'))
-        self.stdout.write('='*60)
-        self.stdout.write(f'Period: {start_date.strftime("%Y-%m-%d")} to {end_date.strftime("%Y-%m-%d")}')
-        self.stdout.write(f'Days: {days}')
-        self.stdout.write(f'Total Bills: {total_bills_created:,}')
-        self.stdout.write(f'Total Revenue: Rp {total_revenue:,.0f}')
-        self.stdout.write(f'Avg Bills/Day: {total_bills_created/days:.1f}')
-        self.stdout.write(f'Avg Bill Value: Rp {total_revenue/total_bills_created:,.0f}\n')
-        
-        # Show payment method distribution
-        payment_dist = Payment.objects.values('payment_method').annotate(
-            count=Count('id'),
-            total=Sum('amount')
-        ).order_by('-count')
-        
-        self.stdout.write('Payment Method Distribution:')
-        for pm in payment_dist:
-            percentage = (pm['count'] / total_bills_created) * 100
-            self.stdout.write(f"  {pm['payment_method']}: {pm['count']:,} ({percentage:.1f}%) - Rp {pm['total']:,.0f}")
-        
-        self.stdout.write('\n' + self.style.SUCCESS('All done! You can now view reports at /reports/sales-report/'))
+        # Summary
+        self.stdout.write(self.style.SUCCESS(f'\n{"="*60}'))
+        self.stdout.write(self.style.SUCCESS('Generation Complete!'))
+        self.stdout.write(self.style.SUCCESS(f'{"="*60}'))
+        self.stdout.write(self.style.SUCCESS(f'Total Bills Created: {total_bills_created}'))
+        self.stdout.write(self.style.SUCCESS(f'Total Revenue: Rp {total_revenue:,.0f}'))
+        self.stdout.write(self.style.SUCCESS(f'Average Bill Value: Rp {total_revenue/total_bills_created if total_bills_created > 0 else 0:,.0f}'))
+        self.stdout.write(self.style.SUCCESS(f'Date Range: {start_date.date()} to {end_date.date()}\n'))
