@@ -75,5 +75,5 @@ urlpatterns = [
     path('api/v1/transactions/', include('transactions.api.urls')),
     
     # API Endpoints - Analytics & Reporting
-    path('api/v1/analytics/', include('analytics.urls')),
+    path('api/v1/analytics/', include('analytics.api_urls')),
 ]

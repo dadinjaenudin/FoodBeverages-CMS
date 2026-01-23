@@ -193,17 +193,17 @@
     
     <!-- Level 2 -->
     <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
-        <a href="{% url 'analytics:sales_report' %}" 
+        <a href="{% url 'analytics:sales-report' %}" 
            class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
             <i class="fas fa-cash-register w-5"></i>
             <span>Sales Report</span>
         </a>
-        <a href="{% url 'analytics:product_performance' %}" 
+        <a href="{% url 'analytics:product-performance' %}" 
            class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
             <i class="fas fa-shopping-cart w-5"></i>
             <span>Product Performance</span>
         </a>
-        <a href="{% url 'analytics:hourly_sales' %}" 
+        <a href="{% url 'analytics:hourly-sales' %}" 
            class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
             <i class="fas fa-clock w-5"></i>
             <span>Hourly Sales</span>
