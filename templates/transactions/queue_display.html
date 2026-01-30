@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Queue Display - AVRIL</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial Black', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 15px 0;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        .brand-name {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            letter-spacing: 8px;
+        }
+        
+        .datetime {
+            font-size: 1.2rem;
+            color: #fff;
+            margin-top: 5px;
+            opacity: 0.9;
+        }
+        
+        .container {
+            padding: 20px;
+            height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px 25px;
+            border-radius: 15px 15px 0 0;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .section-header .icon {
+            font-size: 2.5rem;
+        }
+        
+        .serving-header {
+            background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+            color: #000;
+        }
+        
+        .preparing-header {
+            background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
+            color: #000;
+        }
+        
+        .grid-container {
+            flex: 1;
+            display: grid;
+            gap: 12px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 0 0 15px 15px;
+            overflow: hidden;
+        }
+        
+        .serving-grid {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+        }
+        
+        .preparing-grid {
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+        }
+        
+        .queue-card {
+            background: linear-gradient(135deg, #00ff00 0%, #00dd00 100%);
+            border-radius: 12px;
+            padding: 8px 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-in;
+            transition: all 0.3s ease;
+        }
+        
+        .queue-card.preparing {
+            background: linear-gradient(135deg, #333 0%, #555 100%);
+            border: 3px solid #ff9500;
+        }
+        
+        .queue-card.ready {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 8px 16px rgba(0,255,0,0.4); }
+            50% { transform: scale(1.05); box-shadow: 0 12px 24px rgba(0,255,0,0.6); }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.8); }
+        }
+        
+        .queue-card.removing {
+            animation: fadeOut 0.5s ease-out forwards;
+        }
+        
+        .queue-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+        
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .info-icon {
+            font-size: 1.8rem;
+        }
+        
+        .info-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .info-label {
+            font-size: 0.8rem;
+            opacity: 0.8;
+            font-weight: normal;
+            line-height: 1;
+        }
+        
+        .info-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            line-height: 1;
+            color: #000;
+            text-shadow: 2px 2px 4px rgba(255,255,255,0.3);
+        }
+        
+        .queue-card.preparing .info-value {
+            color: #ff9500;
+        }
+        
+        .queue-card.preparing .info-label {
+            color: #fff;
+        }
+        
+        .ready-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: #00ff00;
+            color: #000;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .queue-card.preparing .ready-badge {
+            background: #ff9500;
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px;info">
+                            <div class="info-row">
+                                <span class="info-icon">📋</span>
+                                <div class="info-content">
+                                    <div class="info-label">No Order</div>
+                                    <div class="info-value">#{{ order.bill_number }}</div>
+                                </div>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-icon">🪑</span>
+                                <div class="info-content">
+                                    <div class="info-label">No Meja</div>
+                                    <div class="info-value">{{ order.table_number|default:"--" }}</div>
+                                </div>
+                            </div>
+                        
+            color: rgba(255,255,255,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="brand-name">AVRIL</div>
+        <div class="datetime" id="current-time">Jumat, 23 Januari 2026 pukul 06.53.30</div>
+    </div>
+
+    <div class="container">
+        <!-- NOW SERVING Section -->
+        <div class="section">
+            <div class="section-header serving-header">
+                <span class="icon">🎯</span>
+                <span>NOW SERVING</span>
+            </div>
+            <div class="grid-container serving-grid" id="serving-container">
+                {% if serving_orders %}
+                    {% for order in serving_orders %}
+                    <div class="queue-card ready" data-bill-id="{{ order.bill_number }}" data-time="{{ order.prepared_at|date:'U' }}">
+                        <div class="queue-number">#{{ order.bill_number }}</div>
+                        <div class="customer-name">{{ order.customer_name }}</div>
+                        <div class="ready-badge">
+                            <span>✓</span> READY
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No orders ready</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PREPARING Section -->
+        <div class="section">
+            <div class="section-header preparing-header">
+                <span class="icon">⏳</span>
+                <span>PREPARING</span>
+            </div>
+            <div class="grid-container preparing-grid" id="preparing-container">
+                {% if preparing_orders %}
+                    {% for order in preparing_orders %}
+                    <div class="queue-card preparing" data-bill-id="{{ order.bill_number }}">
+                        <div class="queue-number">#{{ order.bill_number }}</div>
+                        <div class="customer-name">{{ order.customer_name }}</div>
+                        {% if order.is_ready %}
+                        <div class="ready-badge">
+                            <span>✓</span> READY
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">No orders preparing</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+            const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+            
+            const dayName = days[now.getDay()];
+            const day = now.getDate();
+            const month = months[now.getMonth()];
+            const year = now.getFullYear();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('current-time').textContent = 
+                `${dayName}, ${day} ${month} ${year} pukul ${hours}.${minutes}.${seconds}`;
+        }
+        
+        // Auto-hide served orders after 3 minutes
+        function checkAndRemoveOldOrders() {
+            const servingCards = document.querySelectorAll('#serving-container .queue-card');
+            const currentTime = Math.floor(Date.now() / 1000);
+            const AUTO_HIDE_SECONDS = 180; // 3 minutes
+            
+            servingCards.forEach(card => {
+                const preparedTime = parseInt(card.dataset.time);
+                const elapsedTime = currentTime - preparedTime;
+                
+                if (elapsedTime > AUTO_HIDE_SECONDS) {
+                    card.classList.add('removing');
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if container is empty
+                        const remaining = document.querySelectorAll('#serving-container .queue-card').length;
+                        if (remaining === 0) {
+                            document.getElementById('serving-container').innerHTML = 
+                                '<div class="empty-state">No orders ready</div>';
+                        }
+                    }, 500);
+                }
+            });
+        }
+        
+        // Refresh data from server
+        async function refreshData() {
+            try {
+                const response = await fetch(window.location.href);
+                const html = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                // Update serving section
+                const newServing = doc.querySelector('#serving-container');
+                if (newServing) {
+                    document.getElementById('serving-container').innerHTML = newServing.innerHTML;
+                }
+                
+                // Update preparing section
+                const newPreparing = doc.querySelector('#preparing-container');
+                if (newPreparing) {
+                    document.getElementById('preparing-container').innerHTML = newPreparing.innerHTML;
+                }
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+        
+        // Initialize
+        updateTime();
+        setInterval(updateTime, 1000);
+        setInterval(checkAndRemoveOldOrders, 10000); // Check every 10 seconds
+        setInterval(refreshData, 15000); // Refresh every 15 seconds
+        
+        // Initial check for old orders
+        setTimeout(checkAndRemoveOldOrders, 5000);
+    </script>
+</body>
+</html>

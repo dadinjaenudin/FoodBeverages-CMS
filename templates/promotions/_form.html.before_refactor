@@ -1,0 +1,613 @@
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+<form method="POST" 
+      enctype="multipart/form-data" 
+      class="space-y-3"
+      hx-post="{% if promotion %}{% url 'promotion:edit' promotion.pk %}{% else %}{% url 'promotion:create' %}{% endif %}"
+      hx-target="body"
+      hx-swap="none"
+      x-data="{
+          promoType: '{{ promotion.promo_type|default:""|escapejs }}',
+          allStores: {% if promotion and promotion.all_stores %}true{% else %}false{% endif %},
+          hasMaxCap: {% if promotion and promotion.max_discount_amount %}true{% else %}false{% endif %},
+          hasMinPurchase: {% if promotion and promotion.min_purchase and promotion.min_purchase > 0 %}true{% else %}false{% endif %},
+          hasMaxUses: {% if promotion and promotion.max_uses %}true{% else %}false{% endif %},
+          hasMaxPerCustomer: {% if promotion and promotion.max_uses_per_customer %}true{% else %}false{% endif %},
+          hasMaxPerDay: {% if promotion and promotion.max_uses_per_day %}true{% else %}false{% endif %},
+          discountPercent: {% if promotion and promotion.discount_percent is not None %}{{ promotion.discount_percent|unlocalize }}{% else %}0{% endif %},
+          discountAmount: {% if promotion and promotion.discount_amount is not None %}{{ promotion.discount_amount|unlocalize }}{% else %}0{% endif %},
+          minPurchase: {% if promotion and promotion.min_purchase is not None %}{{ promotion.min_purchase|unlocalize }}{% else %}0{% endif %},
+          maxCap: {% if promotion and promotion.max_discount_amount is not None %}{{ promotion.max_discount_amount|unlocalize }}{% else %}0{% endif %},
+          storeCount: {% if stores %}{{ stores|length }}{% else %}0{% endif %},
+          calculatePreview() {
+              const subtotal = 100000;
+              let discount = 0;
+              
+              if (this.promoType === 'percent_discount' || this.promoType === 'happy_hour') {
+                  discount = subtotal * (this.discountPercent / 100);
+                  if (this.hasMaxCap && this.maxCap > 0) {
+                      discount = Math.min(discount, this.maxCap);
+                  }
+              } else if (this.promoType === 'amount_discount') {
+                  discount = this.discountAmount;
+              }
+              
+              return {
+                  subtotal: subtotal,
+                  discount: discount,
+                  final: subtotal - discount
+              };
+          }
+      }">
+    {% csrf_token %}
+    
+    <!-- Hidden company_id from global filter -->
+    {% if current_company %}
+    <input type="hidden" name="company_id" value="{{ current_company.id }}">
+    {% elif promotion.company %}
+    <input type="hidden" name="company_id" value="{{ promotion.company.id }}">
+    {% endif %}
+
+    {% include 'promotions/components/_scope_store.html' %}
+
+    <!-- Basic Information & Discount Configuration - Side by Side -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <!-- Basic Information -->
+        <div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">Basic Information</h3>
+            
+            <div class="space-y-2">
+                <!-- Promotion Name -->
+                <div>
+                    <label for="id_name" class="block text-xs font-medium text-gray-700 mb-1">
+                        Name <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="name" id="id_name" value="{{ promotion.name|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+
+                <!-- Promotion Code -->
+                <div>
+                    <label for="id_code" class="block text-xs font-medium text-gray-700 mb-1">
+                        Code <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" name="code" id="id_code" value="{{ promotion.code|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+
+                <!-- Start & End Date in one row -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="id_start_date" class="block text-xs font-medium text-gray-700 mb-1">
+                            Start <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" name="start_date" id="id_start_date" value="{{ promotion.start_date|date:'Y-m-d'|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+
+                    <div>
+                        <label for="id_end_date" class="block text-xs font-medium text-gray-700 mb-1">
+                            End <span class="text-red-500">*</span>
+                        </label>
+                        <input type="date" name="end_date" id="id_end_date" value="{{ promotion.end_date|date:'Y-m-d'|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    </div>
+                </div>
+
+                <!-- Promotion Type -->
+                <div>
+                    <label for="id_promo_type" class="block text-xs font-medium text-gray-700 mb-1">
+                        Type <span class="text-red-500">*</span>
+                    </label>
+                    <select name="promo_type" id="id_promo_type" x-model="promoType" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select Type</option>
+                        <option value="percent_discount">Percent Discount (%)</option>
+                        <option value="amount_discount">Amount Discount (Rp)</option>
+                        <option value="buy_x_get_y">Buy X Get Y (BOGO)</option>
+                        <option value="package">Package Deal</option>
+                        <option value="threshold_tier">Tiered Discount</option>
+                        <option value="happy_hour">Happy Hour</option>
+                    </select>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label for="id_description" class="block text-xs font-medium text-gray-700 mb-1">
+                        Description
+                    </label>
+                    <textarea name="description" id="id_description" rows="2" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ promotion.description|default:'' }}</textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discount Configuration -->
+        <div class="bg-white border border-gray-200 rounded-lg px-4 py-3" 
+             x-show="promoType && promoType !== 'buy_x_get_y' && promoType !== 'package'" 
+             x-transition>
+            <h3 class="text-sm font-semibold text-gray-900 mb-2">
+                <i class="fas fa-percentage text-blue-600 mr-2"></i>Discount Config
+            </h3>
+            
+            <div class="space-y-2">
+                <!-- Discount Percent -->
+                <div x-show="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                    <label for="id_discount_percent" class="block text-xs font-medium text-gray-700 mb-1">
+                    Discount Percent (%) <span class="text-red-500">*</span>
+                </label>
+                <input type="number" 
+                       name="discount_percent" 
+                       id="id_discount_percent" 
+                       x-model.number="discountPercent"
+                       value="{% if promotion.discount_percent is not None %}{{ promotion.discount_percent|stringformat:'g' }}{% else %}0{% endif %}" 
+                       min="0" 
+                       max="100" 
+                       step="0.01" 
+                       :class="discountPercent > 50 ? 'w-full px-4 py-2 border-2 border-yellow-500 rounded-lg focus:ring-2 focus:ring-yellow-500' : 'w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'">
+                <p class="mt-1 text-xs text-gray-500">Contoh: 20 untuk diskon 20%</p>
+                
+                <!-- High Discount Warning -->
+                <div x-show="discountPercent > 50" 
+                     x-transition
+                     class="mt-2 p-2 bg-yellow-50 border border-yellow-300 rounded-lg">
+                    <p class="text-xs text-yellow-800">
+                        <i class="fas fa-exclamation-triangle mr-1"></i>
+                        <strong>High discount!</strong> Consider setting a max discount cap below to limit financial exposure.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Discount Amount -->
+            <div x-show="promoType === 'amount_discount' || promoType === 'threshold_tier'">
+                <label for="id_discount_amount" class="block text-sm font-medium text-gray-700 mb-1">
+                    Discount Amount (Rp) <span class="text-red-500">*</span>
+                </label>
+                <input type="text" 
+                       name="discount_amount" 
+                       id="id_discount_amount"
+                       value="{% if promotion.discount_amount is not None %}{{ promotion.discount_amount|floatformat:0|intcomma }}{% else %}{% endif %}" 
+                       x-init="$el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
+                       @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
+                       placeholder="0"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="mt-1 text-xs text-gray-500">Contoh: 10,000 untuk diskon Rp 10.000</p>
+            </div>
+
+                <!-- Max Discount Amount (for percent_discount) - Toggle Based -->
+                <div x-show="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <label class="flex items-center mb-3 cursor-pointer">
+                        <input type="checkbox" 
+                               x-model="hasMaxCap" 
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm font-medium text-gray-700">
+                            Limit Maximum Discount Amount
+                            <i class="fas fa-info-circle text-gray-400 ml-1 cursor-help" 
+                               title="Cap the maximum discount to prevent excessive financial impact"></i>
+                        </span>
+                    </label>
+                    
+                    <div x-show="hasMaxCap" x-transition class="mt-2">
+                        <label for="id_max_discount_amount" class="block text-xs text-gray-600 mb-1">
+                            Max Discount Cap (Rp) <span class="text-red-500" x-show="hasMaxCap">*</span>
+                        </label>
+                        <input type="text" 
+                               name="max_discount_amount" 
+                               id="id_max_discount_amount"
+                               :required="hasMaxCap"
+                               value="{% if promotion.max_discount_amount is not None %}{{ promotion.max_discount_amount|floatformat:0|intcomma }}{% endif %}" 
+                               x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
+                               @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
+                               placeholder="e.g., 50,000"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Example: 50,000 = maximum discount is Rp 50,000 regardless of percentage
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+                <!-- Min Purchase - Toggle Based -->
+                <div>
+                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <label class="flex items-center mb-3 cursor-pointer">
+                        <input type="checkbox" 
+                               x-model="hasMinPurchase" 
+                               class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                        <span class="ml-2 text-sm font-medium text-gray-700">
+                            Require Minimum Purchase
+                        </span>
+                    </label>
+                    
+                    <div x-show="hasMinPurchase" x-transition class="mt-2">
+                        <label for="id_min_purchase" class="block text-xs text-gray-600 mb-1">
+                            Minimum Purchase (Rp) <span class="text-red-500" x-show="hasMinPurchase">*</span>
+                        </label>
+                        <input type="text" 
+                               name="min_purchase" 
+                               id="id_min_purchase"
+                               :required="hasMinPurchase"
+                               value="{% if promotion.min_purchase is not None and promotion.min_purchase > 0 %}{{ promotion.min_purchase|floatformat:0|intcomma }}{% endif %}" 
+                               x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
+                               @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
+                               placeholder="e.g., 200,000"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <p class="mt-1 text-xs text-gray-500">
+                            <i class="fas fa-lightbulb mr-1"></i>
+                            Example: 200,000 = customer must spend at least Rp 200,000
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Time Configuration (Happy Hour) -->
+    <div class="bg-white border border-gray-200 rounded-lg p-4" 
+         x-show="promoType === 'happy_hour'" 
+         x-transition>
+        <h3 class="text-base font-semibold text-gray-900 mb-3">
+            <i class="fas fa-clock text-blue-600 mr-2"></i>Happy Hour Time
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Valid Time Start -->
+            <div>
+                <label for="id_valid_time_start" class="block text-sm font-medium text-gray-700 mb-2">
+                    Start Time <span class="text-red-500">*</span>
+                </label>
+                <input type="time" name="valid_time_start" id="id_valid_time_start" value="{{ promotion.valid_time_start|time:'H:i'|default:'' }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="mt-1 text-xs text-gray-500">Contoh: 14:00</p>
+            </div>
+
+            <!-- Valid Time End -->
+            <div>
+                <label for="id_valid_time_end" class="block text-sm font-medium text-gray-700 mb-2">
+                    End Time <span class="text-red-500">*</span>
+                </label>
+                <input type="time" name="valid_time_end" id="id_valid_time_end" value="{{ promotion.valid_time_end|time:'H:i'|default:'' }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="mt-1 text-xs text-gray-500">Contoh: 16:00</p>
+            </div>
+        </div>
+        
+        <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-xs text-yellow-800">
+                <i class="fas fa-info-circle mr-1"></i>
+                <strong>Catatan:</strong> Happy Hour akan berlaku setiap hari pada jam yang ditentukan selama periode promosi.
+            </p>
+        </div>
+    </div>
+
+    <!-- BOGO Configuration -->
+    <div class="bg-white border border-gray-200 rounded-lg p-4" 
+         x-show="promoType === 'buy_x_get_y'" 
+         x-transition>
+        <h3 class="text-base font-semibold text-gray-900 mb-3">
+            <i class="fas fa-gift text-blue-600 mr-2"></i>BOGO Configuration (Buy X Get Y)
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Buy Quantity -->
+            <div>
+                <label for="id_buy_quantity" class="block text-sm font-medium text-gray-700 mb-2">
+                    Buy Quantity <span class="text-red-500" x-show="promoType === 'buy_x_get_y'">*</span>
+                </label>
+                <input type="number" 
+                       name="buy_quantity" 
+                       id="id_buy_quantity" 
+                       value="{{ promotion.buy_quantity|default:'0' }}" 
+                       min="0" 
+                       step="1"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="mt-1 text-xs text-gray-500">Jumlah item yang harus dibeli</p>
+            </div>
+
+            <!-- Get Quantity -->
+            <div>
+                <label for="id_get_quantity" class="block text-sm font-medium text-gray-700 mb-2">
+                    Get Quantity (Free) <span class="text-red-500" x-show="promoType === 'buy_x_get_y'">*</span>
+                </label>
+                <input type="number" 
+                       name="get_quantity" 
+                       id="id_get_quantity" 
+                       value="{{ promotion.get_quantity|default:'0' }}" 
+                       min="0" 
+                       step="1"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <p class="mt-1 text-xs text-gray-500">Jumlah item gratis yang didapat</p>
+            </div>
+        </div>
+        
+        <div class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-xs text-green-800">
+                <i class="fas fa-lightbulb mr-1"></i>
+                <strong>Contoh:</strong> Buy Quantity = 2, Get Quantity = 1 berarti "Beli 2 Gratis 1"
+            </p>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+            <i class="fas fa-cog text-blue-600 mr-2"></i>Settings
+        </h3>
+        
+        <div class="grid grid-cols-4 gap-3">
+            <!-- Is Active -->
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="is_active" id="id_is_active" {% if promotion.is_active %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                <span class="ml-2 text-xs text-gray-700">Active</span>
+            </label>
+
+            <!-- Member Only -->
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="member_only" id="id_member_only" {% if promotion.member_only %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                <span class="ml-2 text-xs text-gray-700">Member Only</span>
+            </label>
+
+            <!-- Auto Apply -->
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="is_auto_apply" id="id_is_auto_apply" {% if promotion.is_auto_apply %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                <span class="ml-2 text-xs text-gray-700">Auto-apply</span>
+            </label>
+
+            <!-- Is Stackable -->
+            <label class="flex items-center cursor-pointer">
+                <input type="checkbox" name="is_stackable" id="id_is_stackable" {% if promotion.is_stackable %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+                <span class="ml-2 text-xs text-gray-700">Stackable</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Advanced Controls (Priority & Usage Limits) -->
+    <div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+            <i class="fas fa-shield-alt text-blue-600 mr-2"></i>Advanced Controls
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <!-- Priority -->
+            <div>
+                    <label for="id_priority" class="block text-xs font-medium text-gray-700 mb-1">
+                        Priority
+                        <i class="fas fa-info-circle text-gray-400 ml-1 cursor-help" 
+                           title="Higher number = runs first"></i>
+                    </label>
+                    <input type="number" 
+                           name="priority" 
+                           id="id_priority"
+                           value="{{ promotion.priority|default:'100' }}"
+                           min="0" 
+                           max="999" 
+                           step="1"
+                           class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <p class="mt-1 text-xs text-gray-500">
+                        Higher = applied first (default: 100)
+                    </p>
+                </div>
+
+            <!-- Total Max Uses -->
+            <div class="border border-gray-200 rounded p-2 bg-gray-50">
+                <label class="flex items-center mb-1 cursor-pointer">
+                                <input type="checkbox" 
+                                       x-model="hasMaxUses" 
+                                       class="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-1 text-xs font-medium text-gray-700">
+                                    Total
+                                </span>
+                            </label>
+                            
+                            <div x-show="hasMaxUses" x-transition>
+                                <input type="text" 
+                                       name="max_uses" 
+                                       id="id_max_uses" 
+                                       :required="hasMaxUses"
+                                       value="{% if promotion.max_uses %}{{ promotion.max_uses|floatformat:0|intcomma }}{% endif %}"
+                                       x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
+                                       @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
+                                       placeholder="1,000"
+                                       class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+            <!-- Per Customer Limit -->
+            <div class="border border-gray-200 rounded p-2 bg-gray-50">
+                            <label class="flex items-center mb-1 cursor-pointer">
+                                <input type="checkbox" 
+                                       x-model="hasMaxPerCustomer" 
+                                       class="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-1 text-xs font-medium text-gray-700">
+                                    Per User
+                                </span>
+                            </label>
+                            
+                            <div x-show="hasMaxPerCustomer" x-transition>
+                                <input type="number" 
+                                       name="max_uses_per_customer" 
+                                       id="id_max_uses_per_customer" 
+                                       :required="hasMaxPerCustomer"
+                                       value="{{ promotion.max_uses_per_customer|default:'' }}"
+                                       min="1"
+                                       placeholder="3"
+                                       class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+            <!-- Per Day Limit -->
+            <div class="border border-gray-200 rounded p-2 bg-gray-50">
+                            <label class="flex items-center mb-1 cursor-pointer">
+                                <input type="checkbox" 
+                                       x-model="hasMaxPerDay" 
+                                       class="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <span class="ml-1 text-xs font-medium text-gray-700">
+                                    Per Day
+                                </span>
+                            </label>
+                            
+                            <div x-show="hasMaxPerDay" x-transition>
+                                <input type="text" 
+                                       name="max_uses_per_day" 
+                                       id="id_max_uses_per_day" 
+                                       :required="hasMaxPerDay"
+                                       value="{% if promotion.max_uses_per_day %}{{ promotion.max_uses_per_day|floatformat:0|intcomma }}{% endif %}"
+                                       x-init="if ($el.value) $el.value = new Intl.NumberFormat('en-US').format($el.value.replace(/[^0-9]/g, ''))"
+                                       @input="let val = $event.target.value.replace(/[^0-9]/g, ''); if (val) $event.target.value = new Intl.NumberFormat('en-US').format(val);"
+                                       placeholder="100"
+                                       class="w-full px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500">
+                            </div>
+                        </div>
+        </div>
+    </div>
+
+    <!-- Promotion Preview/Simulation -->
+    <div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg px-4 py-3"
+         x-show="promoType && (promoType === 'percent_discount' || promoType === 'amount_discount' || promoType === 'happy_hour')"
+         x-transition>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">
+            <i class="fas fa-calculator text-blue-600 mr-2"></i>Promotion Preview (Simulation)
+        </h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Example Bill -->
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <h4 class="text-sm font-bold text-gray-900 mb-3">Example Bill</h4>
+                <div class="space-y-2 text-sm text-gray-600">
+                    <div class="flex justify-between">
+                        <span>2x Chicken Rice</span>
+                        <span>@Rp<span x-text="(50000).toLocaleString('en-US')"></span></span>
+                    </div>
+                    <div class="flex justify-between pt-2 border-t border-gray-200">
+                        <span class="font-medium text-gray-900">Subtotal:</span>
+                        <span class="font-bold text-gray-900">Rp<span x-text="(100000).toLocaleString('en-US')"></span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Result -->
+            <div class="bg-white rounded-lg p-4 shadow-sm border-2 border-green-200">
+                <h4 class="text-sm font-bold text-gray-900 mb-3">Promotion Result</h4>
+                <div class="space-y-2 text-sm">
+                    <!-- Percent Discount -->
+                    <div x-show="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                        <div class="flex justify-between text-green-600">
+                            <span>Discount (<span x-text="discountPercent || 0"></span>%):</span>
+                            <template x-if="!hasMaxCap || maxCap === 0">
+                                <span class="font-bold">-Rp<span x-text="Math.round((100000 * (discountPercent || 0) / 100)).toLocaleString('en-US')"></span></span>
+                            </template>
+                            <template x-if="hasMaxCap && maxCap > 0">
+                                <span class="font-bold">-Rp<span x-text="Math.min(Math.round(100000 * (discountPercent || 0) / 100), maxCap || 0).toLocaleString('en-US')"></span></span>
+                            </template>
+                        </div>
+                        <div x-show="hasMaxCap && maxCap > 0 && (100000 * (discountPercent || 0) / 100) > maxCap" 
+                             class="text-xs text-amber-600 mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>Capped at Rp<span x-text="(maxCap || 0).toLocaleString('en-US')"></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Amount Discount -->
+                    <div x-show="promoType === 'amount_discount'">
+                        <div class="flex justify-between text-green-600">
+                            <span>Discount:</span>
+                            <span class="font-bold">-Rp<span x-text="(discountAmount || 0).toLocaleString('en-US')"></span></span>
+                        </div>
+                    </div>
+                    
+                    <!-- Minimum Purchase Check -->
+                    <div x-show="hasMinPurchase && minPurchase > 0" class="text-xs" 
+                         :class="100000 >= minPurchase ? 'text-green-600' : 'text-red-600'">
+                        <i :class="100000 >= minPurchase ? 'fas fa-check-circle' : 'fas fa-times-circle'" class="mr-1"></i>
+                        <span x-show="100000 >= minPurchase">Min. purchase requirement met</span>
+                        <span x-show="100000 < minPurchase">Min. purchase Rp<span x-text="(minPurchase || 0).toLocaleString('en-US')"></span> not met</span>
+                    </div>
+                    
+                    <div class="flex justify-between pt-2 border-t-2 border-gray-300 text-base">
+                        <span class="font-bold text-gray-900">Final Total:</span>
+                        <template x-if="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                            <span class="font-bold text-blue-700">
+                                Rp<span x-text="Math.max(0, 100000 - (hasMaxCap && maxCap > 0 ? Math.min(Math.round(100000 * (discountPercent || 0) / 100), maxCap || 0) : Math.round(100000 * (discountPercent || 0) / 100))).toLocaleString('en-US')"></span>
+                            </span>
+                        </template>
+                        <template x-if="promoType === 'amount_discount'">
+                            <span class="font-bold text-blue-700">
+                                Rp<span x-text="Math.max(0, 100000 - (discountAmount || 0)).toLocaleString('en-US')"></span>
+                            </span>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-4 p-3 bg-white rounded-lg border border-blue-200">
+            <p class="text-xs text-gray-600">
+                <i class="fas fa-lightbulb text-blue-600 mr-1"></i>
+                <strong>Real-time simulation:</strong> This preview updates automatically based on your discount settings. Actual results may vary based on product prices and bill composition.
+            </p>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="flex items-center justify-end space-x-4">
+        <a href="{% url 'promotion:list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            Cancel
+        </a>
+        <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+            {% if promotion.pk %}Update{% else %}Create{% endif %} Promotion
+        </button>
+    </div>
+
+</form>
+
+<script>
+console.log('DEBUG: Checking Alpine.js x-data initialization...');
+console.log('Form element:', document.querySelector('form'));
+console.log('x-data attribute:', document.querySelector('form')?.getAttribute('x-data'));
+
+// Remove commas before form submission (intercept before HTMX)
+document.addEventListener('submit', function(event) {
+    const form = event.target;
+    if (!form) return;
+    
+    // Get all text input fields that might have commas
+    const currencyFields = form.querySelectorAll('input[type="text"][name*="amount"], input[type="text"][name*="purchase"], input[type="text"][name*="uses"]');
+    
+    console.log('Processing fields before submission:');
+    currencyFields.forEach(field => {
+        // Check if field is visible (not hidden by Alpine.js)
+        const isVisible = field.offsetParent !== null;
+        
+        if (isVisible && field.value) {
+            console.log(field.name + ' (before):', field.value);
+            // Remove commas for submission
+            field.value = field.value.replace(/,/g, '');
+            console.log(field.name + ' (after):', field.value);
+        } else if (!isVisible) {
+            // Clear value if hidden to prevent validation issues
+            field.value = '';
+            console.log(field.name + ': cleared (hidden field)');
+        }
+    });
+}, true); // Use capture phase to run before HTMX
+
+document.body.addEventListener('htmx:beforeSwap', function(event) {
+    if (event.detail.xhr.status === 200) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            if (response.success && response.redirect) {
+                window.location.href = response.redirect;
+            }
+        } catch (e) {
+            // Not JSON response, continue normal swap
+        }
+    }
+});
+
+document.body.addEventListener('htmx:responseError', function(event) {
+    console.error('HTMX Error:', event.detail);
+    console.error('Response:', event.detail.xhr.responseText);
+    try {
+        const response = JSON.parse(event.detail.xhr.responseText);
+        alert('Error: ' + (response.message || 'An error occurred'));
+    } catch (e) {
+        alert('An error occurred while submitting the form. Check console for details.');
+    }
+});
+</script>

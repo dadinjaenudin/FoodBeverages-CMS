@@ -1,0 +1,470 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Table Area Dashboard - Real-time Operations{% endblock %}
+
+{% block extra_head %}
+<style>
+    .area-card {
+        transition: all 0.3s ease;
+    }
+    .area-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .table-seat {
+        width: 50px;
+        height: 50px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        position: relative;
+    }
+    .table-available { 
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+    .table-occupied { 
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+    .table-reserved { 
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+    }
+    .table-inactive { 
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+    }
+    
+    .table-seat:hover {
+        transform: scale(1.1);
+    }
+    
+    .occupancy-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        overflow: hidden;
+    }
+    
+    .occupancy-fill {
+        height: 100%;
+        transition: width 0.8s ease;
+    }
+    
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 8px;
+    }
+    
+    .pulse {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50" x-data="tableAreaDashboard()">
+    <!-- Header -->
+    <div class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+                        <i class="fas fa-tachometer-alt text-blue-600 mr-3"></i>
+                        Table Area Dashboard
+                    </h1>
+                    <p class="text-sm text-gray-600 mt-2">Real-time table status and area management</p>
+                </div>
+                
+                <div class="flex items-center gap-4">
+                    <!-- Last Updated -->
+                    <div class="text-right">
+                        <p class="text-xs text-gray-500">Last updated</p>
+                        <p class="text-sm font-medium text-gray-900" x-text="lastUpdated">
+                            {{ "now"|date:"H:i:s" }}
+                        </p>
+                    </div>
+                    
+                    <!-- Auto Refresh Toggle -->
+                    <label class="flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="autoRefresh" class="sr-only">
+                        <div class="relative">
+                            <div class="w-10 h-4 bg-gray-400 rounded-full shadow-inner transition"
+                                 :class="autoRefresh ? 'bg-green-400' : ''"></div>
+                            <div class="absolute w-6 h-6 bg-white rounded-full shadow -left-1 -top-1 transition transform"
+                                 :class="autoRefresh ? 'translate-x-full bg-green-500' : ''"></div>
+                        </div>
+                        <span class="ml-2 text-xs text-gray-600">Auto Refresh</span>
+                    </label>
+                    
+                    <!-- Brand Filter -->
+                    <select class="text-sm border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">All Brands</option>
+                        {% for brand in brands %}
+                        <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
+                            {{ brand.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overall Stats -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Areas -->
+            <div class="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-blue-100 text-sm font-medium">Total Areas</p>
+                        <p class="text-3xl font-bold">{{ overall_stats.total_areas }}</p>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-full p-3">
+                        <i class="fas fa-map-marked-alt text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Tables -->
+            <div class="bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-purple-100 text-sm font-medium">Total Tables</p>
+                        <p class="text-3xl font-bold">{{ overall_stats.total_tables }}</p>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-full p-3">
+                        <i class="fas fa-chair text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Occupied Tables -->
+            <div class="bg-gradient-to-r from-red-500 to-red-600 rounded-xl p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-red-100 text-sm font-medium">Occupied</p>
+                        <p class="text-3xl font-bold">{{ overall_stats.total_occupied }}</p>
+                        <p class="text-red-200 text-xs">{{ overall_stats.overall_occupancy }}% occupancy</p>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-full p-3">
+                        <i class="fas fa-users text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Capacity -->
+            <div class="bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-green-100 text-sm font-medium">Capacity</p>
+                        <p class="text-3xl font-bold">{{ overall_stats.total_capacity }}</p>
+                        <p class="text-green-200 text-xs">total seats</p>
+                    </div>
+                    <div class="bg-white bg-opacity-20 rounded-full p-3">
+                        <i class="fas fa-expand-arrows-alt text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Status Legend -->
+        <div class="bg-white rounded-lg shadow-sm p-4 mb-6">
+            <h3 class="text-sm font-medium text-gray-900 mb-3">Table Status Legend</h3>
+            <div class="flex flex-wrap gap-6">
+                <div class="flex items-center">
+                    <div class="status-indicator bg-green-500"></div>
+                    <span class="text-xs text-gray-600">Available</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="status-indicator bg-red-500"></div>
+                    <span class="text-xs text-gray-600">Occupied</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="status-indicator bg-yellow-500"></div>
+                    <span class="text-xs text-gray-600">Reserved</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="status-indicator bg-gray-500"></div>
+                    <span class="text-xs text-gray-600">Inactive</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Areas Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {% for metric in area_metrics %}
+            <div class="area-card bg-white rounded-xl shadow-sm border overflow-hidden">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold">{{ metric.area.name }}</h3>
+                            <p class="text-indigo-100 text-sm">{{ metric.area.brand.name }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-2xl font-bold">{{ metric.occupancy_rate }}%</p>
+                            <p class="text-indigo-200 text-xs">occupancy</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Occupancy Bar -->
+                    <div class="mt-4">
+                        <div class="occupancy-bar">
+                            <div class="occupancy-fill bg-gradient-to-r from-yellow-300 to-red-400"
+                                 style="width: {{ metric.occupancy_rate }}%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stats Row -->
+                <div class="px-6 py-3 bg-gray-50 border-b">
+                    <div class="grid grid-cols-4 gap-4 text-center">
+                        <div>
+                            <p class="text-lg font-bold text-green-600">{{ metric.available_tables }}</p>
+                            <p class="text-xs text-gray-500">Available</p>
+                        </div>
+                        <div>
+                            <p class="text-lg font-bold text-red-600">{{ metric.occupied_tables }}</p>
+                            <p class="text-xs text-gray-500">Occupied</p>
+                        </div>
+                        <div>
+                            <p class="text-lg font-bold text-yellow-600">{{ metric.reserved_tables }}</p>
+                            <p class="text-xs text-gray-500">Reserved</p>
+                        </div>
+                        <div>
+                            <p class="text-lg font-bold text-blue-600">{{ metric.total_capacity }}</p>
+                            <p class="text-xs text-gray-500">Capacity</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Layout -->
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="text-sm font-medium text-gray-900">Table Layout</h4>
+                        <span class="text-xs text-gray-500">{{ metric.table_count }} tables</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-6 gap-3" style="max-height: 200px;">
+                        {% for table in metric.tables %}
+                        <div class="table-seat table-{{ table.status }}"
+                             title="Table {{ table.number }} - {{ table.status|capfirst }} ({{ table.capacity }} seats)"
+                             @click="selectTable('{{ table.id }}', '{{ table.number }}', '{{ table.status }}')">
+                            {{ table.number }}
+                        </div>
+                        {% empty %}
+                        <div class="col-span-6 text-center text-gray-400 py-8">
+                            <i class="fas fa-chair text-2xl mb-2"></i>
+                            <p class="text-xs">No tables configured</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="px-6 py-4 bg-gray-50 flex justify-between">
+                    <button class="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center">
+                        <i class="fas fa-edit mr-1"></i>
+                        Edit Area
+                    </button>
+                    <button class="text-indigo-600 hover:text-indigo-700 text-sm font-medium flex items-center"
+                            @click="viewFloorPlan('{{ metric.area.id }}')">
+                        <i class="fas fa-map mr-1"></i>
+                        Floor Plan
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-span-full text-center py-12">
+                <i class="fas fa-map-marker-alt text-6xl text-gray-300 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No table areas found</h3>
+                <p class="text-gray-500 mb-6">Create your first table area to start managing your restaurant</p>
+                <a href="{% url 'tablearea:enhanced_list' %}" 
+                   class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition">
+                    <i class="fas fa-plus mr-2"></i>
+                    Create Table Area
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Table Status Modal -->
+    <div x-show="showTableModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+        <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div x-show="showTableModal" 
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0"
+                 x-transition:enter-end="opacity-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="fixed inset-0 transition-opacity" @click="showTableModal = false">
+                <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+            </div>
+
+            <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
+
+            <div x-show="showTableModal"
+                 x-transition:enter="ease-out duration-300"
+                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave="ease-in duration-200"
+                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                
+                <div class="bg-white px-6 pt-6 pb-4">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
+                        Update Table Status
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <p class="text-sm text-gray-600">
+                            Table: <span class="font-medium" x-text="selectedTable.number"></span>
+                        </p>
+                        <p class="text-sm text-gray-600">
+                            Current Status: <span class="font-medium capitalize" x-text="selectedTable.status"></span>
+                        </p>
+                    </div>
+
+                    <div class="space-y-2">
+                        <button @click="updateTableStatus('available')"
+                                class="w-full text-left px-4 py-3 rounded-lg border border-green-300 bg-green-50 hover:bg-green-100 transition">
+                            <div class="flex items-center">
+                                <div class="status-indicator bg-green-500"></div>
+                                <span class="font-medium text-green-800">Available</span>
+                            </div>
+                        </button>
+                        
+                        <button @click="updateTableStatus('occupied')"
+                                class="w-full text-left px-4 py-3 rounded-lg border border-red-300 bg-red-50 hover:bg-red-100 transition">
+                            <div class="flex items-center">
+                                <div class="status-indicator bg-red-500"></div>
+                                <span class="font-medium text-red-800">Occupied</span>
+                            </div>
+                        </button>
+                        
+                        <button @click="updateTableStatus('reserved')"
+                                class="w-full text-left px-4 py-3 rounded-lg border border-yellow-300 bg-yellow-50 hover:bg-yellow-100 transition">
+                            <div class="flex items-center">
+                                <div class="status-indicator bg-yellow-500"></div>
+                                <span class="font-medium text-yellow-800">Reserved</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-gray-50 px-6 py-3">
+                    <button @click="showTableModal = false"
+                            class="w-full bg-gray-300 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-400 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function tableAreaDashboard() {
+    return {
+        autoRefresh: false,
+        lastUpdated: '',
+        showTableModal: false,
+        selectedTable: { id: '', number: '', status: '' },
+        refreshInterval: null,
+        
+        init() {
+            this.updateTimestamp();
+            this.setupAutoRefresh();
+        },
+        
+        updateTimestamp() {
+            const now = new Date();
+            this.lastUpdated = now.toLocaleTimeString();
+        },
+        
+        setupAutoRefresh() {
+            this.$watch('autoRefresh', (value) => {
+                if (value) {
+                    this.refreshInterval = setInterval(() => {
+                        this.refreshData();
+                    }, 30000); // Refresh every 30 seconds
+                } else {
+                    if (this.refreshInterval) {
+                        clearInterval(this.refreshInterval);
+                        this.refreshInterval = null;
+                    }
+                }
+            });
+        },
+        
+        refreshData() {
+            // In real implementation, this would fetch updated data
+            this.updateTimestamp();
+            // location.reload(); // For demo purposes
+        },
+        
+        selectTable(tableId, tableNumber, status) {
+            this.selectedTable = {
+                id: tableId,
+                number: tableNumber,
+                status: status
+            };
+            this.showTableModal = true;
+        },
+        
+        updateTableStatus(newStatus) {
+            // Update table status via API
+            fetch('{% url "tablearea:update_table_status" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: `table_id=${this.selectedTable.id}&status=${newStatus}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    this.showTableModal = false;
+                    // Refresh the page to show updated status
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating table status.');
+            });
+        },
+        
+        viewFloorPlan(areaId) {
+            // Open floor plan view (could be a new page or modal)
+            window.open(`/products/tableareas/${areaId}/layout/`, '_blank');
+        }
+    }
+}
+</script>
+{% endblock %}

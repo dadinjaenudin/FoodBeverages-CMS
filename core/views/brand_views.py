@@ -3,6 +3,9 @@ Brand CRUD Views
 Ultra compact UI with HTMX + Alpine.js
 """
 
+import logging
+import traceback
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.contrib import messages
@@ -12,6 +15,8 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 
 from core.models import Brand, Company
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -78,9 +83,9 @@ def brand_create(request):
             address = request.POST.get('address', '').strip()
             phone = request.POST.get('phone', '').strip()
             tax_id = request.POST.get('tax_id', '').strip()
-            tax_rate = request.POST.get('tax_rate', 11.00)
-            service_charge = request.POST.get('service_charge', 5.00)
-            point_expiry_override = request.POST.get('point_expiry_months_override', '')
+            tax_rate = request.POST.get('tax_rate', '11.00').strip() or '11.00'
+            service_charge = request.POST.get('service_charge', '5.00').strip() or '5.00'
+            point_expiry_override = request.POST.get('point_expiry_months_override', '').strip()
             is_active = request.POST.get('is_active') == 'on'
             
             # Validation
@@ -123,9 +128,11 @@ def brand_create(request):
             })
             
         except Exception as e:
+            logger.error(f"Error creating brand: {str(e)}")
+            logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
-                'message': str(e)
+                'message': f'Error: {str(e)}'
             }, status=500)
     
     # GET request - show form
@@ -150,9 +157,9 @@ def brand_update(request, pk):
             address = request.POST.get('address', '').strip()
             phone = request.POST.get('phone', '').strip()
             tax_id = request.POST.get('tax_id', '').strip()
-            tax_rate = request.POST.get('tax_rate', 11.00)
-            service_charge = request.POST.get('service_charge', 5.00)
-            point_expiry_override = request.POST.get('point_expiry_months_override', '')
+            tax_rate = request.POST.get('tax_rate', '11.00').strip() or '11.00'
+            service_charge = request.POST.get('service_charge', '5.00').strip() or '5.00'
+            point_expiry_override = request.POST.get('point_expiry_months_override', '').strip()
             is_active = request.POST.get('is_active') == 'on'
             
             # Validation
@@ -190,9 +197,11 @@ def brand_update(request, pk):
             })
             
         except Exception as e:
+            logger.error(f"Error updating brand: {str(e)}")
+            logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
-                'message': str(e)
+                'message': f'Error: {str(e)}'
             }, status=500)
     
     # GET request - show form
@@ -209,14 +218,27 @@ def brand_update(request, pk):
 def brand_delete(request, pk):
     """
     Delete brand (HTMX)
+    Will cascade delete all related stores.
+    Users' brand field will be set to NULL automatically.
     """
     brand = get_object_or_404(Brand, pk=pk)
     
     try:
+        # Get counts for info message
+        store_count = brand.stores.count()
+        user_count = brand.users.count()
         brand_name = brand.name
+        
+        # Delete brand (will cascade delete stores and set users.brand to NULL)
         brand.delete()
         
-        messages.success(request, f'Brand "{brand_name}" deleted successfully!')
+        msg_parts = [f'Brand "{brand_name}" deleted successfully']
+        if store_count > 0:
+            msg_parts.append(f'{store_count} store(s) deleted')
+        if user_count > 0:
+            msg_parts.append(f'{user_count} user(s) reassigned to company level')
+        
+        messages.success(request, '. '.join(msg_parts) + '!')
         
         return JsonResponse({
             'success': True,
@@ -225,7 +247,9 @@ def brand_delete(request, pk):
         })
         
     except Exception as e:
+        logger.error(f"Error deleting brand: {str(e)}")
+        logger.error(traceback.format_exc())
         return JsonResponse({
             'success': False,
-            'message': str(e)
+            'message': f'Cannot delete brand: {str(e)}'
         }, status=500)

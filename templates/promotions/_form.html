@@ -1,0 +1,394 @@
+{% load static %}
+{% load humanize %}
+{% load l10n %}
+
+<form method="POST" 
+      enctype="multipart/form-data" 
+      class="space-y-3"
+      hx-post="{% if promotion %}{% url 'promotion:edit' promotion.pk %}{% else %}{% url 'promotion:create' %}{% endif %}"
+      hx-target="body"
+      hx-swap="none"
+      x-data="{
+          promoType: '{{ promotion.promo_type|default:""|escapejs }}',
+          applyTo: '{{ promotion.apply_to|default:"all"|escapejs }}',
+          productSearch: '',
+          excludeProductSearch: '',
+          showCategoryModal: false,
+          showProductModal: false,
+          showExcludeCategoryModal: false,
+          showExcludeProductModal: false,
+          showStoreModal: false,
+          showTriggerBrandModal: false,
+          showBenefitBrandModal: false,
+          modalCategorySearch: '',
+          modalProductSearch: '',
+          modalExcludeCategorySearch: '',
+          modalExcludeProductSearch: '',
+          modalStoreSearch: '',
+          selectedCategoryCount: {{ promotion.categories.count|default:0 }},
+          selectedProductCount: {{ promotion.products.count|default:0 }},
+          excludedCategoryCount: {{ promotion.exclude_categories.count|default:0 }},
+          excludedProductCount: {{ promotion.exclude_products.count|default:0 }},
+          selectedStoreCount: {{ promotion.stores.count|default:0 }},
+          isCrossBrand: {% if promotion and promotion.is_cross_brand %}true{% else %}false{% endif %},
+          crossBrandType: '{{ promotion.cross_brand_type|default:""|escapejs }}',
+          triggerBrandCount: {{ promotion.trigger_brands.count|default:0 }},
+          benefitBrandCount: {{ promotion.benefit_brands.count|default:0 }},
+          modalTriggerBrandSearch: '',
+          modalBenefitBrandSearch: '',
+          hasExcludeCategories: {% if promotion and promotion.exclude_categories.count > 0 %}true{% else %}false{% endif %},
+          hasExcludeProducts: {% if promotion and promotion.exclude_products.count > 0 %}true{% else %}false{% endif %},
+          allStores: {% if promotion and promotion.all_stores %}true{% else %}false{% endif %},
+          hasMaxCap: {% if promotion and promotion.max_discount_amount %}true{% else %}false{% endif %},
+          hasMinPurchase: {% if promotion and promotion.min_purchase and promotion.min_purchase > 0 %}true{% else %}false{% endif %},
+          hasMaxUses: {% if promotion and promotion.max_uses %}true{% else %}false{% endif %},
+          hasMaxPerCustomer: {% if promotion and promotion.max_uses_per_customer %}true{% else %}false{% endif %},
+          hasMaxPerDay: {% if promotion and promotion.max_uses_per_day %}true{% else %}false{% endif %},
+          discountPercent: {% if promotion and promotion.discount_percent is not None %}{{ promotion.discount_percent|unlocalize }}{% else %}0{% endif %},
+          discountAmount: {% if promotion and promotion.discount_amount is not None %}{{ promotion.discount_amount|unlocalize }}{% else %}0{% endif %},
+          minPurchase: {% if promotion and promotion.min_purchase is not None %}{{ promotion.min_purchase|unlocalize }}{% else %}0{% endif %},
+          maxCap: {% if promotion and promotion.max_discount_amount is not None %}{{ promotion.max_discount_amount|unlocalize }}{% else %}0{% endif %},
+          storeCount: {% if stores %}{{ stores|length }}{% else %}0{% endif %},
+          calculatePreview() {
+              const subtotal = 100000;
+              let discount = 0;
+              
+              if (this.promoType === 'percent_discount' || this.promoType === 'happy_hour') {
+                  discount = subtotal * (this.discountPercent / 100);
+                  if (this.hasMaxCap && this.maxCap > 0) {
+                      discount = Math.min(discount, this.maxCap);
+                  }
+              } else if (this.promoType === 'amount_discount') {
+                  discount = this.discountAmount;
+              }
+              
+              return {
+                  subtotal: subtotal,
+                  discount: discount,
+                  final: subtotal - discount
+              };
+          },
+          updateSelectedCategoryCount() {
+              this.selectedCategoryCount = document.querySelectorAll('input[name=categories]:checked').length;
+          },
+          updateSelectedCount() {
+              this.selectedProductCount = document.querySelectorAll('input[name=products]:checked').length;
+          },
+          selectAllCategories() {
+              document.querySelectorAll('input[name=categories]').forEach(cb => cb.checked = true);
+              this.updateSelectedCategoryCount();
+          },
+          deselectAllCategories() {
+              document.querySelectorAll('input[name=categories]').forEach(cb => cb.checked = false);
+              this.updateSelectedCategoryCount();
+          },
+          selectAllProducts() {
+              document.querySelectorAll('input[name=products]').forEach(cb => cb.checked = true);
+              this.updateSelectedCount();
+          },
+          deselectAllProducts() {
+              document.querySelectorAll('input[name=products]').forEach(cb => cb.checked = false);
+              this.updateSelectedCount();
+          },
+          updateExcludedCategoryCount() {
+              this.excludedCategoryCount = document.querySelectorAll('input[name=exclude_categories]:checked').length;
+          },
+          updateExcludedProductCount() {
+              this.excludedProductCount = document.querySelectorAll('input[name=exclude_products]:checked').length;
+          },
+          selectAllExcludeCategories() {
+              document.querySelectorAll('input[name=exclude_categories]').forEach(cb => cb.checked = true);
+              this.updateExcludedCategoryCount();
+          },
+          deselectAllExcludeCategories() {
+              document.querySelectorAll('input[name=exclude_categories]').forEach(cb => cb.checked = false);
+              this.updateExcludedCategoryCount();
+          },
+          selectAllExcludeProducts() {
+              document.querySelectorAll('input[name=exclude_products]').forEach(cb => cb.checked = true);
+              this.updateExcludedProductCount();
+          },
+          deselectAllExcludeProducts() {
+              document.querySelectorAll('input[name=exclude_products]').forEach(cb => cb.checked = false);
+              this.updateExcludedProductCount();
+          },
+          updateSelectedStoreCount() {
+              this.selectedStoreCount = document.querySelectorAll('input[name=stores]:checked').length;
+          },
+          selectAllStores() {
+              document.querySelectorAll('input[name=stores]').forEach(cb => cb.checked = true);
+              this.updateSelectedStoreCount();
+          },
+          deselectAllStores() {
+              document.querySelectorAll('input[name=stores]').forEach(cb => cb.checked = false);
+              this.updateSelectedStoreCount();
+          },
+          updateTriggerBrandCount() {
+              this.triggerBrandCount = document.querySelectorAll('input[name=trigger_brands]:checked').length;
+          },
+          updateBenefitBrandCount() {
+              this.benefitBrandCount = document.querySelectorAll('input[name=benefit_brands]:checked').length;
+          },
+          selectAllTriggerBrands() {
+              document.querySelectorAll('input[name=trigger_brands]').forEach(cb => cb.checked = true);
+              this.updateTriggerBrandCount();
+          },
+          deselectAllTriggerBrands() {
+              document.querySelectorAll('input[name=trigger_brands]').forEach(cb => cb.checked = false);
+              this.updateTriggerBrandCount();
+          },
+          selectAllBenefitBrands() {
+              document.querySelectorAll('input[name=benefit_brands]').forEach(cb => cb.checked = true);
+              this.updateBenefitBrandCount();
+          },
+          deselectAllBenefitBrands() {
+              document.querySelectorAll('input[name=benefit_brands]').forEach(cb => cb.checked = false);
+              this.updateBenefitBrandCount();
+          },
+          formatNumber(value) {
+              if (!value) return '0';
+              return parseInt(value.toString().replace(/,/g, '')).toLocaleString('id-ID');
+          },
+          formatCurrency(value) {
+              // Remove non-numeric characters except comma
+              let numericValue = value.replace(/[^\d]/g, '');
+              if (!numericValue) return '';
+              
+              // Convert to number and format with thousand separator
+              let number = parseInt(numericValue);
+              return number.toLocaleString('id-ID');
+          }
+      }">
+    {% csrf_token %}
+    
+    <!-- Info/Warning Alert: Show Current Company & Brand from Global Filter -->
+    {% if promotion %}
+        <!-- EDIT MODE: Show promotion's company and brand -->
+        {% if promotion.company and promotion.brand %}
+            <div class="bg-blue-50 border-l-4 border-blue-500 p-3 mb-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-info-circle text-blue-500 mt-0.5"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm text-blue-800 font-medium">
+                            Editing promotion for: 
+                            <span class="font-bold">{{ promotion.company.name }}</span>
+                            → <span class="font-bold">{{ promotion.brand.name }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- WARNING: Missing company or brand -->
+            <div class="bg-red-50 border-l-4 border-red-500 p-3 mb-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-500 mt-0.5"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm text-red-800 font-bold">
+                            ⚠️ DATA INTEGRITY ERROR:
+                        </p>
+                        <p class="text-sm text-red-700 mt-1">
+                            {% if not promotion.company %}
+                                This promotion has NO COMPANY assigned.
+                            {% endif %}
+                            {% if not promotion.brand %}
+                                This promotion has NO BRAND assigned.
+                            {% endif %}
+                            <br>Cannot save changes. Please contact administrator to fix this promotion.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% else %}
+        <!-- CREATE MODE: Show current global filter -->
+        {% if current_company and current_brand %}
+            <div class="bg-green-50 border-l-4 border-green-500 p-3 mb-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm text-green-800 font-medium">
+                            ✅ Creating promotion for: 
+                            <span class="font-bold">{{ current_company.name }}</span>
+                            → <span class="font-bold">{{ current_brand.name }}</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% else %}
+            <!-- ERROR: No company or brand selected -->
+            <div class="bg-red-50 border-l-4 border-red-500 p-3 mb-3">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-exclamation-triangle text-red-500 mt-0.5"></i>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <p class="text-sm text-red-800 font-bold">
+                            ⚠️ REQUIRED: Company and Brand must be selected!
+                        </p>
+                        <p class="text-sm text-red-700 mt-1">
+                            {% if not current_company %}
+                                → No company selected. 
+                            {% endif %}
+                            {% if not current_brand %}
+                                → No brand selected.
+                            {% endif %}
+                            <br>Please select both Company AND Brand from the global filter at the top of the page before creating a promotion.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- Store Selection, Apply To & Exclude - All in One Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {% include 'promotions/components/_scope_store.html' %}
+        {% include 'promotions/components/_apply_to_scope.html' %}
+        {% include 'promotions/components/_exclude_scope.html' %}
+    </div>
+    
+    <!-- Cross-Brand Configuration -->
+    {% include 'promotions/components/_cross_brand_config.html' %}
+    
+    <!-- Modals -->
+    {% include 'promotions/components/_store_selector_modal.html' %}
+    {% include 'promotions/components/_category_selector_modal.html' %}
+    {% include 'promotions/components/_product_selector_modal.html' %}
+    {% include 'promotions/components/_exclude_category_modal.html' %}
+    {% include 'promotions/components/_exclude_product_modal.html' %}
+    {% include 'promotions/components/_trigger_brand_modal.html' %}
+    {% include 'promotions/components/_benefit_brand_modal.html' %}
+
+    <!-- Basic Information & Discount Configuration - Side by Side -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {% include 'promotions/components/_basic_info.html' %}
+
+        <!-- Discount Type Components -->
+        {% include 'promotions/components/discount_types/_percent_discount.html' %}
+        {% include 'promotions/components/discount_types/_amount_discount.html' %}
+        {% include 'promotions/components/discount_types/_buy_x_get_y.html' %}
+        {% include 'promotions/components/discount_types/_package.html' %}
+        {% include 'promotions/components/discount_types/_package_deal.html' %}
+        {% include 'promotions/components/discount_types/_threshold_tier.html' %}
+    </div>
+
+    {% include 'promotions/components/discount_types/_happy_hour.html' %}
+
+    {% include 'promotions/components/_settings.html' %}
+    {% include 'promotions/components/_advanced_controls.html' %}
+
+    {% include 'promotions/components/_preview.html' %}
+
+    <!-- Form Actions -->
+    <div class="flex items-center justify-end space-x-4">
+        <a href="{% url 'promotion:list' %}" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50">
+            Cancel
+        </a>
+        <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">
+            {% if promotion.pk %}Update{% else %}Create{% endif %} Promotion
+        </button>
+    </div>
+
+</form>
+
+<script>
+console.log('DEBUG: Checking Alpine.js x-data initialization...');
+console.log('Form element:', document.querySelector('form'));
+console.log('x-data attribute:', document.querySelector('form')?.getAttribute('x-data'));
+
+// Remove commas before form submission (intercept before HTMX)
+document.addEventListener('submit', function(event) {
+    const form = event.target;
+    if (!form) return;
+    
+    // Get all text input fields that might have commas
+    const currencyFields = form.querySelectorAll('input[type="text"][name*="amount"], input[type="text"][name*="purchase"], input[type="text"][name*="uses"]');
+    
+    console.log('Processing fields before submission:');
+    currencyFields.forEach(field => {
+        if (field.value) {
+            // Remove commas from ALL fields with values (visible or hidden)
+            const before = field.value;
+            field.value = field.value.replace(/,/g, '');
+            if (before !== field.value) {
+                console.log(field.name + ': ' + before + ' → ' + field.value);
+            }
+        }
+    });
+}, true); // Use capture phase to run before HTMX
+
+// Client-side validation before submit (CREATE MODE ONLY)
+{% if not promotion %}
+document.querySelector('form').addEventListener('htmx:configRequest', function(event) {
+    // Check if company and brand are selected (only in create mode)
+    const hasCompany = {% if current_company %}true{% else %}false{% endif %};
+    const hasBrand = {% if current_brand %}true{% else %}false{% endif %};
+    
+    if (!hasCompany || !hasBrand) {
+        event.preventDefault();
+        let message = '⚠️ Cannot create promotion!\n\n';
+        if (!hasCompany) {
+            message += '→ No Company selected\n';
+        }
+        if (!hasBrand) {
+            message += '→ No Brand selected\n';
+        }
+        message += '\nPlease select both Company and Brand from the global filter at the top of the page.';
+        alert(message);
+        return false;
+    }
+});
+{% endif %}
+
+// Server-side validation for EDIT MODE (check if promotion has company/brand)
+{% if promotion %}
+document.querySelector('form').addEventListener('htmx:configRequest', function(event) {
+    const hasCompany = {% if promotion.company %}true{% else %}false{% endif %};
+    const hasBrand = {% if promotion.brand %}true{% else %}false{% endif %};
+    
+    if (!hasCompany || !hasBrand) {
+        event.preventDefault();
+        let message = '⚠️ DATA INTEGRITY ERROR!\n\n';
+        if (!hasCompany) {
+            message += '→ This promotion has NO COMPANY assigned\n';
+        }
+        if (!hasBrand) {
+            message += '→ This promotion has NO BRAND assigned\n';
+        }
+        message += '\nCannot save changes. Please contact administrator to fix this promotion.';
+        alert(message);
+        return false;
+    }
+});
+{% endif %}
+
+document.body.addEventListener('htmx:beforeSwap', function(event) {
+    if (event.detail.xhr.status === 200) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            if (response.success && response.redirect) {
+                window.location.href = response.redirect;
+            }
+        } catch (e) {
+            // Not JSON response, continue normal swap
+        }
+    }
+});
+
+document.body.addEventListener('htmx:responseError', function(event) {
+    console.error('HTMX Error:', event.detail);
+    console.error('Response:', event.detail.xhr.responseText);
+    try {
+        const response = JSON.parse(event.detail.xhr.responseText);
+        alert('Error: ' + (response.message || 'An error occurred'));
+    } catch (e) {
+        alert('An error occurred while submitting the form. Check console for details.');
+    }
+});
+</script>

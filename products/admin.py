@@ -6,7 +6,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     Category, Product, ProductPhoto, Modifier, ModifierOption,
-    ProductModifier, TableArea, Table, TableGroup, TableGroupMember,
+    ProductModifier, TableArea, Tables, TableGroup, TableGroupMember,
     KitchenStation, PrinterConfig
 )
 
@@ -141,23 +141,27 @@ class ModifierOptionAdmin(admin.ModelAdmin):
 # =============================================================================
 
 class TableInline(admin.TabularInline):
-    model = Table
+    model = Tables
     extra = 1
     fields = ['number', 'capacity', 'qr_code', 'pos_x', 'pos_y', 'is_active']
 
 
 @admin.register(TableArea)
 class TableAreaAdmin(admin.ModelAdmin):
-    list_display = ['name', 'brand', 'get_table_count', 'sort_order', 'is_active']
-    list_filter = ['brand', 'is_active', 'created_at']
-    search_fields = ['name', 'brand__name']
+    list_display = ['name', 'store', 'get_brand_name', 'get_table_count', 'sort_order', 'is_active']
+    list_filter = ['store__brand', 'store', 'is_active', 'created_at']
+    search_fields = ['name', 'store__store_name', 'store__brand__name']
     readonly_fields = ['id', 'created_at', 'updated_at']
-    autocomplete_fields = ['brand']
+    autocomplete_fields = ['store']
     inlines = [TableInline]
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('id', 'brand', 'name', 'sort_order', 'is_active')
+            'fields': ('id', 'store', 'name', 'description', 'sort_order', 'is_active')
+        }),
+        ('Floor Plan', {
+            'fields': ('floor_width', 'floor_height', 'floor_image'),
+            'classes': ('collapse',)
         }),
         ('Timestamps', {
             'fields': ('created_at', 'updated_at'),
@@ -165,17 +169,22 @@ class TableAreaAdmin(admin.ModelAdmin):
         }),
     )
     
+    def get_brand_name(self, obj):
+        """Get brand name through store"""
+        return obj.store.brand.name
+    get_brand_name.short_description = 'Brand'
+    
     def get_table_count(self, obj):
         """Count tables in area"""
         return obj.tables.count()
     get_table_count.short_description = 'Tables'
 
 
-@admin.register(Table)
+@admin.register(Tables)
 class TableAdmin(admin.ModelAdmin):
-    list_display = ['number', 'area', 'get_brand', 'capacity', 'status', 'is_active']
-    list_filter = ['area__brand', 'area', 'status', 'is_active']
-    search_fields = ['number', 'area__name', 'qr_code']
+    list_display = ['number', 'area', 'get_store', 'get_brand', 'capacity', 'status', 'is_active']
+    list_filter = ['area__store__brand', 'area__store', 'area', 'status', 'is_active']
+    search_fields = ['number', 'area__name', 'area__store__store_name', 'qr_code']
     readonly_fields = ['id', 'created_at', 'updated_at']
     autocomplete_fields = ['area']
     
@@ -196,11 +205,17 @@ class TableAdmin(admin.ModelAdmin):
         }),
     )
     
+    def get_store(self, obj):
+        """Get store through area"""
+        return obj.area.store.store_name
+    get_store.short_description = 'Store'
+    get_store.admin_order_field = 'area__store'
+    
     def get_brand(self, obj):
-        """Get brand through area"""
-        return obj.area.brand
+        """Get brand through area and store"""
+        return obj.area.store.brand.name
     get_brand.short_description = 'Brand'
-    get_brand.admin_order_field = 'area__brand'
+    get_brand.admin_order_field = 'area__store__brand'
 
 
 class TableGroupMemberInline(admin.TabularInline):

@@ -1,0 +1,85 @@
+<!-- Promotion Preview/Simulation -->
+<div class="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg px-4 py-3"
+     x-show="promoType && (promoType === 'percent_discount' || promoType === 'amount_discount' || promoType === 'happy_hour')"
+     x-transition>
+    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+        <i class="fas fa-calculator text-blue-600 mr-2"></i>Promotion Preview
+    </h3>
+    
+    <div class="grid grid-cols-2 gap-3">
+        <!-- Example Bill -->
+        <div class="bg-white rounded-lg p-3 shadow-sm">
+            <h4 class="text-xs font-bold text-gray-900 mb-2">Example Bill</h4>
+            <div class="space-y-1 text-xs text-gray-600">
+                <div class="flex justify-between">
+                    <span>2x Chicken Rice</span>
+                    <span>@Rp<span x-text="(50000).toLocaleString('en-US')"></span></span>
+                </div>
+                <div class="flex justify-between pt-1 border-t border-gray-200">
+                    <span class="font-medium text-gray-900">Subtotal:</span>
+                    <span class="font-bold text-gray-900">Rp<span x-text="(100000).toLocaleString('en-US')"></span></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Result -->
+        <div class="bg-white rounded-lg p-3 shadow-sm border-2 border-green-200">
+            <h4 class="text-xs font-bold text-gray-900 mb-2">Result</h4>
+            <div class="space-y-1 text-xs">
+                <!-- Percent Discount -->
+                <div x-show="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                    <div class="flex justify-between text-green-600">
+                        <span>Discount (<span x-text="discountPercent || 0"></span>%):</span>
+                        <template x-if="!hasMaxCap || maxCap === 0">
+                            <span class="font-bold">-Rp<span x-text="Math.round((100000 * (discountPercent || 0) / 100)).toLocaleString('en-US')"></span></span>
+                        </template>
+                        <template x-if="hasMaxCap && maxCap > 0">
+                            <span class="font-bold">-Rp<span x-text="Math.min(Math.round(100000 * (discountPercent || 0) / 100), maxCap || 0).toLocaleString('en-US')"></span></span>
+                        </template>
+                    </div>
+                    <div x-show="hasMaxCap && maxCap > 0 && (100000 * (discountPercent || 0) / 100) > maxCap" 
+                         class="text-xs text-amber-600">
+                        <i class="fas fa-info-circle mr-1"></i>Capped at Rp<span x-text="(maxCap || 0).toLocaleString('en-US')"></span>
+                    </div>
+                </div>
+                
+                <!-- Amount Discount -->
+                <div x-show="promoType === 'amount_discount'">
+                    <div class="flex justify-between text-green-600">
+                        <span>Discount:</span>
+                        <span class="font-bold">-Rp<span x-text="(discountAmount || 0).toLocaleString('en-US')"></span></span>
+                    </div>
+                </div>
+                
+                <!-- Minimum Purchase Check -->
+                <div x-show="hasMinPurchase && minPurchase > 0" class="text-xs" 
+                     :class="100000 >= minPurchase ? 'text-green-600' : 'text-red-600'">
+                    <i :class="100000 >= minPurchase ? 'fas fa-check-circle' : 'fas fa-times-circle'" class="mr-1"></i>
+                    <span x-show="100000 >= minPurchase">Min. purchase met</span>
+                    <span x-show="100000 < minPurchase">Min. Rp<span x-text="(minPurchase || 0).toLocaleString('en-US')"></span> not met</span>
+                </div>
+                
+                <div class="flex justify-between pt-1 border-t-2 border-gray-300">
+                    <span class="font-bold text-gray-900">Final:</span>
+                    <template x-if="promoType === 'percent_discount' || promoType === 'happy_hour'">
+                        <span class="font-bold text-blue-700">
+                            Rp<span x-text="Math.max(0, 100000 - (hasMaxCap && maxCap > 0 ? Math.min(Math.round(100000 * (discountPercent || 0) / 100), maxCap || 0) : Math.round(100000 * (discountPercent || 0) / 100))).toLocaleString('en-US')"></span>
+                        </span>
+                    </template>
+                    <template x-if="promoType === 'amount_discount'">
+                        <span class="font-bold text-blue-700">
+                            Rp<span x-text="Math.max(0, 100000 - (discountAmount || 0)).toLocaleString('en-US')"></span>
+                        </span>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-2 p-2 bg-white rounded border border-blue-200">
+        <p class="text-xs text-gray-600">
+            <i class="fas fa-lightbulb text-blue-600 mr-1"></i>
+            Real-time preview updates based on your settings
+        </p>
+    </div>
+</div>

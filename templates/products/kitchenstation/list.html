@@ -13,7 +13,7 @@
         <li>
             <div class="flex items-center">
                 <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
-                <span class="text-sm font-medium text-gray-900">Kitchen Station</span>
+                <span class="text-sm font-medium text-gray-900">Kitchen Stations</span>
             </div>
         </li>
     </ol>
@@ -24,7 +24,6 @@
 <div x-data="{ 
     showModal: false, 
     modalTitle: 'Add Kitchen Station',
-    modalUrl: '{% url "kitchenstation:create" %}',
     deleteUrl: '',
     deleteItem: '',
     showDeleteConfirm: false
@@ -33,63 +32,61 @@
     <div class="flex justify-between items-center mb-3">
         <div>
             <h1 class="text-xl font-bold text-gray-900">Kitchen Station Management</h1>
-            <p class="text-xs text-gray-600 mt-0.5">Manage your kitchenstations ({{ total_count }} total)</p>
+            <p class="text-xs text-gray-600 mt-0.5">Manage kitchen stations ({{ kitchenstations.paginator.count }} total)</p>
         </div>
         <button 
-            @click="showModal = true; modalTitle = 'Add Kitchen Station'; modalUrl = '{% url "kitchenstation:create" %}'"
+            @click="showModal = true; modalTitle = 'Add Kitchen Station'"
+            hx-get="{% url 'kitchenstation:create' %}"
+            hx-target="#modal-content"
             class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
             <i class="fas fa-plus mr-1.5"></i>
             Add Kitchen Station
         </button>
     </div>
 
-    <!-- Filters - Compact -->
+    <!-- Search & Current Store Info -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'kitchenstation:list' %}" hx-target="#kitchenstation-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#brand-filter, change from:#brand-filter">
-            <div class="flex-1 relative">
-                <input 
-                    type="text" 
-                    name="search" 
-                    id="search-input"
-                    value="{{ search }}"
-                    placeholder="Search by code, name, or address..."
-                    class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+        <div class="flex items-center gap-3 mb-2">
+            <div class="flex-1">
+                <form method="get" hx-get="{% url 'kitchenstation:list' %}" hx-target="#kitchenstation-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input">
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            name="search" 
+                            id="search-input"
+                            value="{{ search }}"
+                            placeholder="Search by name or code..."
+                            class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
+                    </div>
+                </form>
             </div>
             
-            <select 
-                name="brand" 
-                id="brand-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Companies</option>
-                {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
-                    {{ brand.name }}
-                </option>
-                {% endfor %}
-            </select>
+            {% if current_store %}
+            <div class="flex items-center px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                <i class="fas fa-store text-green-500 text-sm mr-2"></i>
+                <span class="text-sm text-green-800 font-medium">{{ current_store.store_name }}</span>
+            </div>
+            {% endif %}
             
-            <select 
-                name="brand" 
-                id="brand-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Brands</option>
-                {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
-                    {{ brand.name }}
-                </option>
-                {% endfor %}
-            </select>
-            
-            <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
-                <i class="fas fa-search mr-1"></i> Search
-            </button>
-            {% if search or brand_id or brand_id %}
-            <a href="{% url 'kitchenstation:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
+            {% if search %}
+            <a href="{% url 'kitchenstation:list' %}" class="px-3 py-1.5 bg-gray-500 text-white text-sm font-medium rounded-lg hover:bg-gray-600 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
             {% endif %}
-        </form>
+        </div>
+        
+        {% if not current_store %}
+        <div class="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mt-0.5 mr-2"></i>
+                <div class="text-sm text-yellow-800">
+                    <p class="font-medium">Store Selection Required</p>
+                    <p class="text-xs mt-1">Please select a Store from the header dropdown to view kitchen stations. Kitchen stations are store-specific.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Kitchen Station Table -->
@@ -134,14 +131,10 @@
                     </div>
                 </div>
 
-                <div id="modal-content" 
-                     hx-get="" 
-                     x-bind:hx-get="modalUrl"
-                     hx-trigger="load"
-                     hx-swap="innerHTML"
-                     class="p-4">
+                <div id="modal-content" class="p-4">
                     <div class="flex justify-center items-center py-8">
-                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <span class="ml-3 text-gray-600">Loading form...</span>
                     </div>
                 </div>
             </div>
@@ -157,47 +150,33 @@
          aria-modal="true">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
             <div x-show="showDeleteConfirm"
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0"
-                 x-transition:enter-end="opacity-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100"
-                 x-transition:leave-end="opacity-0"
                  @click="showDeleteConfirm = false"
                  class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
                  aria-hidden="true"></div>
-
+            
             <div x-show="showDeleteConfirm"
-                 x-transition:enter="ease-out duration-300"
-                 x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave="ease-in duration-200"
-                 x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                 x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-                
-                <div class="bg-white p-4">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                 class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
                             <i class="fas fa-exclamation-triangle text-red-600"></i>
                         </div>
-                        <div class="ml-3 flex-1">
-                            <h3 class="text-sm font-semibold text-gray-900">Delete Kitchen Station</h3>
-                            <p class="mt-2 text-xs text-gray-600">
-                                Are you sure you want to delete <strong x-text="deleteItem"></strong>? 
-                                This will also delete all related terminals and transaction data.
-                            </p>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900">
+                                Delete Kitchen Station
+                            </h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500">
+                                    Are you sure you want to delete "<span x-text="deleteItem"></span>"? 
+                                    This action cannot be undone.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="bg-gray-50 px-4 py-3 flex gap-2 justify-end">
-                    <button @click="showDeleteConfirm = false" 
-                            type="button"
-                            class="px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition">
-                        Cancel
-                    </button>
-                    <button @click="
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button
+                        @click="
                         fetch(deleteUrl, { 
                             method: 'POST',
                             headers: { 
@@ -215,9 +194,15 @@
                         });
                         showDeleteConfirm = false;
                     "
-                            type="button"
-                            class="px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition">
-                        <i class="fas fa-trash mr-1"></i> Delete
+                        type="button"
+                        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                        Delete
+                    </button>
+                    <button
+                        @click="showDeleteConfirm = false"
+                        type="button"
+                        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                        Cancel
                     </button>
                 </div>
             </div>

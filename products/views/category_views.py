@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from django.contrib import messages
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Prefetch
 from django.core.paginator import Paginator
 from products.models import Category
 from core.models import Brand
@@ -19,25 +19,55 @@ def category_list(request):
     brand_id = request.GET.get('brand', '')
     page = request.GET.get('page', 1)
     
-    # Base queryset
-    categories = Category.objects.select_related('brand', 'parent').annotate(
-        product_count=Count('products')
-    )
+    # Get current brand from Global Filter (middleware)
+    current_brand = getattr(request, 'current_brand', None)
+    current_company = getattr(request, 'current_company', None)
     
-    # Apply search
     if search:
+        # Flat list for search results
+        categories = Category.objects.select_related('brand', 'parent').annotate(
+            product_count=Count('products')
+        )
+        
         categories = categories.filter(
             Q(name__icontains=search) |
             Q(brand__name__icontains=search)
         )
-    
-    # Apply brand filter
-    if brand_id:
-        categories = categories.filter(brand_id=brand_id)
-    
-    # Apply ordering
-    categories = categories.order_by('sort_order', 'name')
-    
+        
+        # Apply Global Brand Filter
+        if current_brand:
+            categories = categories.filter(brand=current_brand)
+        elif current_company:
+            categories = categories.filter(brand__company=current_company)
+        elif brand_id:
+            categories = categories.filter(brand_id=brand_id)
+            
+        categories = categories.order_by('sort_order', 'name')
+        
+    else:
+        # Hierarchical list (Parent -> Children)
+        # 1. Prepare children queryset with annotation
+        children_queryset = Category.objects.select_related('brand').annotate(
+            product_count=Count('products')
+        ).order_by('sort_order', 'name')
+        
+        # 2. Fetch parents with prefetched children
+        categories = Category.objects.filter(parent__isnull=True).select_related('brand').annotate(
+            product_count=Count('products')
+        ).prefetch_related(
+            Prefetch('children', queryset=children_queryset)
+        )
+        
+        # Apply Global Brand Filter
+        if current_brand:
+            categories = categories.filter(brand=current_brand)
+        elif current_company:
+            categories = categories.filter(brand__company=current_company)
+        elif brand_id:
+            categories = categories.filter(brand_id=brand_id)
+            
+        categories = categories.order_by('sort_order', 'name')
+
     # Pagination
     paginator = Paginator(categories, 10)
     categories_page = paginator.get_page(page)
@@ -48,7 +78,8 @@ def category_list(request):
     if request.headers.get('HX-Request'):
         return render(request, 'products/category/_table.html', {
             'categories': categories_page,
-            'brands': brands
+            'brands': brands,
+            'search': search  # Pass search to template to know render mode
         })
     
     return render(request, 'products/category/list.html', {
@@ -65,7 +96,11 @@ def category_create(request):
     """Create new category"""
     if request.method == 'POST':
         try:
+            # Get brand from global filter or POST
             brand_id = request.POST.get('brand_id')
+            if not brand_id and hasattr(request, 'current_brand') and request.current_brand:
+                brand_id = request.current_brand.id
+            
             name = request.POST.get('name', '').strip()
             parent_id = request.POST.get('parent_id', '').strip()
             sort_order = request.POST.get('sort_order', '0')
@@ -103,12 +138,25 @@ def category_create(request):
             }, status=500)
     
     # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    categories = Category.objects.none()  # Empty queryset for create mode
+    # Check if creating subcategory (parent parameter)
+    parent_id = request.GET.get('parent', '')
+    parent_category = None
+    
+    # Get current brand from global filter
+    current_brand = getattr(request, 'current_brand', None)
+    
+    if parent_id:
+        parent_category = get_object_or_404(Category.objects.select_related('brand'), pk=parent_id)
+        categories = Category.objects.filter(brand=parent_category.brand).order_by('name')
+    elif current_brand:
+        # For create mode, show categories from current brand for parent selection
+        categories = Category.objects.filter(brand=current_brand, parent__isnull=True).order_by('name')
+    else:
+        categories = Category.objects.none()  # Empty queryset
     
     return render(request, 'products/category/_form.html', {
-        'brands': brands,
-        'categories': categories
+        'categories': categories,
+        'parent_category': parent_category
     })
 
 
@@ -155,12 +203,10 @@ def category_update(request, pk):
             }, status=500)
     
     # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    categories = Category.objects.filter(brand=category.brand).exclude(pk=pk).order_by('name')
+    categories = Category.objects.filter(brand=category.brand, parent__isnull=True).exclude(pk=pk).order_by('name')
     
     return render(request, 'products/category/_form.html', {
         'category': category,
-        'brands': brands,
         'categories': categories
     })
 

@@ -6,6 +6,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from django.db import transaction
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from transactions.models import (
     Bill, BillItem, Payment, BillPromotion, CashDrop,
     StoreSession, CashierShift, KitchenOrder, BillRefund, InventoryMovement
@@ -17,6 +18,7 @@ from .serializers import (
 )
 
 
+@extend_schema(tags=['Transactions'])
 class BillPushViewSet(viewsets.ViewSet):
     """
     Receive bills from Edge (create-only)
@@ -24,6 +26,12 @@ class BillPushViewSet(viewsets.ViewSet):
     """
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Push Single Bill",
+        description="Receive a single completed bill from Edge server",
+        responses={201: None},
+        request=BillSerializer
+    )
     @action(detail=False, methods=['post'])
     def push(self, request):
         """
@@ -39,6 +47,11 @@ class BillPushViewSet(viewsets.ViewSet):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        summary="Push Bulk Bills",
+        description="Receive multiple bills from Edge server in one request",
+        responses={201: None}
+    )
     @action(detail=False, methods=['post'])
     def push_bulk(self, request):
         """
@@ -69,10 +82,16 @@ class BillPushViewSet(viewsets.ViewSet):
         }, status=status.HTTP_201_CREATED if len(errors) == 0 else status.HTTP_207_MULTI_STATUS)
 
 
+@extend_schema(tags=['Transactions'])
 class CashDropPushViewSet(viewsets.ViewSet):
     """Receive cash drops from Edge"""
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Push Cash Drop",
+        description="Receive a cash drop record from Edge server",
+        request=CashDropSerializer
+    )
     @action(detail=False, methods=['post'])
     def push(self, request):
         """Push single cash drop"""
@@ -85,6 +104,10 @@ class CashDropPushViewSet(viewsets.ViewSet):
             )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+    @extend_schema(
+        summary="Push Bulk Cash Drops",
+        description="Receive multiple cash drop records from Edge server"
+    )
     @action(detail=False, methods=['post'])
     def push_bulk(self, request):
         """Push multiple cash drops"""
@@ -98,10 +121,16 @@ class CashDropPushViewSet(viewsets.ViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=['Transactions'])
 class StoreSessionPushViewSet(viewsets.ViewSet):
     """Receive EOD sessions from Edge"""
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Push Store Session (EOD)",
+        description="Receive End of Day session data from Edge server",
+        request=StoreSessionSerializer
+    )
     @action(detail=False, methods=['post'])
     def push(self, request):
         """Push store session (EOD)"""
@@ -115,10 +144,16 @@ class StoreSessionPushViewSet(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Transactions'])
 class CashierShiftPushViewSet(viewsets.ViewSet):
     """Receive cashier shifts from Edge"""
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Push Cashier Shift",
+        description="Receive cashier shift data from Edge server",
+        request=CashierShiftSerializer
+    )
     @action(detail=False, methods=['post'])
     def push(self, request):
         """Push cashier shift"""
@@ -132,10 +167,15 @@ class CashierShiftPushViewSet(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@extend_schema(tags=['Transactions'])
 class InventoryMovementPushViewSet(viewsets.ViewSet):
     """Receive inventory movements from Edge"""
     permission_classes = [permissions.IsAuthenticated]
     
+    @extend_schema(
+        summary="Push Bulk Inventory Movements",
+        description="Receive stock movements (deductions) from Edge server"
+    )
     @action(detail=False, methods=['post'])
     def push_bulk(self, request):
         """Push multiple inventory movements"""
@@ -149,6 +189,7 @@ class InventoryMovementPushViewSet(viewsets.ViewSet):
         }, status=status.HTTP_201_CREATED)
 
 
+@extend_schema(tags=['Transactions'], summary="Bulk Push All Data", description="Receive mixed transaction data in one request")
 @api_view(['POST'])
 @permission_classes([permissions.IsAuthenticated])
 def bulk_push(request):

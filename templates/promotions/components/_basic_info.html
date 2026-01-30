@@ -1,0 +1,63 @@
+<!-- Basic Information -->
+<div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+    <h3 class="text-sm font-semibold text-gray-900 mb-2">Basic Information</h3>
+    
+    <div class="space-y-2">
+        <!-- Promotion Name -->
+        <div>
+            <label for="id_name" class="block text-xs font-medium text-gray-700 mb-1">
+                Name <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="name" id="id_name" value="{{ promotion.name|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+
+        <!-- Promotion Code -->
+        <div>
+            <label for="id_code" class="block text-xs font-medium text-gray-700 mb-1">
+                Code <span class="text-red-500">*</span>
+            </label>
+            <input type="text" name="code" id="id_code" value="{{ promotion.code|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg font-mono uppercase focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        </div>
+
+        <!-- Start & End Date in one row -->
+        <div class="grid grid-cols-2 gap-2">
+            <div>
+                <label for="id_start_date" class="block text-xs font-medium text-gray-700 mb-1">
+                    Start <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="start_date" id="id_start_date" value="{{ promotion.start_date|date:'Y-m-d'|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+
+            <div>
+                <label for="id_end_date" class="block text-xs font-medium text-gray-700 mb-1">
+                    End <span class="text-red-500">*</span>
+                </label>
+                <input type="date" name="end_date" id="id_end_date" value="{{ promotion.end_date|date:'Y-m-d'|default:'' }}" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            </div>
+        </div>
+
+        <!-- Promotion Type -->
+        <div>
+            <label for="id_promo_type" class="block text-xs font-medium text-gray-700 mb-1">
+                Type <span class="text-red-500">*</span>
+            </label>
+            <select name="promo_type" id="id_promo_type" x-model="promoType" required class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="">Select Type</option>
+                <option value="percent_discount">Percent Discount (%)</option>
+                <option value="amount_discount">Amount Discount (Rp)</option>
+                <option value="buy_x_get_y">Buy X Get Y (BOGO)</option>
+                <option value="package">Package Deal</option>
+                <option value="threshold_tier">Tiered Discount</option>
+                <option value="happy_hour">Happy Hour</option>
+            </select>
+        </div>
+
+        <!-- Description -->
+        <div>
+            <label for="id_description" class="block text-xs font-medium text-gray-700 mb-1">
+                Description
+            </label>
+            <textarea name="description" id="id_description" rows="2" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">{{ promotion.description|default:'' }}</textarea>
+        </div>
+    </div>
+</div>

@@ -186,6 +186,15 @@ def store_delete(request, pk):
     store = get_object_or_404(Store, pk=pk)
     
     try:
+        # Check if there are related terminals (if Terminal model exists)
+        # Uncomment when Terminal model is ready:
+        # terminal_count = store.terminals.count()
+        # if terminal_count > 0:
+        #     return JsonResponse({
+        #         'success': False,
+        #         'message': f'Cannot delete store "{store.store_name}" because it has {terminal_count} terminal(s). Please delete all terminals first.'
+        #     }, status=400)
+        
         store_name = store.store_name
         store.delete()
         
@@ -200,5 +209,5 @@ def store_delete(request, pk):
     except Exception as e:
         return JsonResponse({
             'success': False,
-            'message': str(e)
+            'message': f'Cannot delete store: {str(e)}'
         }, status=500)

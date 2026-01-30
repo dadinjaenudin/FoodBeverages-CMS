@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Import Two Sheet - Settings{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-file-excel text-green-600"></i>
+            Bulk Import (Two Sheet Format)
+        </h1>
+        <p class="text-gray-600 mt-2">Upload Excel file with Products and Condiment Groups sheets</p>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Two Sheet Format:</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <p class="font-semibold mb-2">Sheet 1: Products (10 Columns)</p>
+                    <ul class="list-disc list-inside space-y-1 ml-4">
+                        <li><strong>Company Code</strong> - Company code (e.g., YGY)</li>
+                        <li><strong>Brand Code</strong> - Brand code (e.g., AVRIL)</li>
+                        <li><strong>Category</strong> - Parent category (Makanan, Minuman, Dessert)</li>
+                        <li><strong>Menu Category</strong> - Child category (Ayam, Kopi, Teh)</li>
+                        <li><strong>Product Name</strong> - Display name</li>
+                        <li><strong>PLU Product</strong> - SKU code</li>
+                        <li><strong>Printer Kitchen</strong> - bar/kitchen/dessert</li>
+                        <li><strong>Condiment Groups</strong> - Group names separated by comma</li>
+                        <li><strong>Price Product</strong> - Selling price</li>
+                        <li><strong>Image Product</strong> - Image filename</li>
+                    </ul>
+                    
+                    <p class="font-semibold mb-2 mt-4">Sheet 2: Condiment Groups (5 Columns)</p>
+                    <ul class="list-disc list-inside space-y-1 ml-4">
+                        <li><strong>Group Name</strong> - Name from Condiment Groups column</li>
+                        <li><strong>Option Name</strong> - Option display name</li>
+                        <li><strong>Fee</strong> - Price change (e.g., 5000)</li>
+                        <li><strong>Is Required</strong> - Yes/No</li>
+                        <li><strong>Max Selections</strong> - Number (e.g., 1)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Upload Instructions -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-image text-yellow-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Product Image Instructions:</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Upload your product images to: <strong class="bg-white px-2 py-1 rounded">static/product/image/</strong></li>
+                        <li>System will automatically extract filename from path</li>
+                        <li>Example: <code>products/Menu_Image_20231203013316.jpg</code> → will use <code>Menu_Image_20231203013316.jpg</code></li>
+                        <li>Supported formats: JPG, PNG, WEBP</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-upload text-blue-500 mr-2"></i>
+            Upload Two Sheet Excel
+        </h2>
+        
+        <form id="uploadForm" 
+              hx-post="{% url 'settings:upload_two_sheet_excel' %}" 
+              hx-encoding="multipart/form-data"
+              hx-swap="none"
+              class="space-y-4">
+            {% csrf_token %}
+            
+            <!-- File Input -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Excel File (.xlsx or .xls)
+                </label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="file-upload" 
+                           class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                            <p class="mb-2 text-sm text-gray-500">
+                                <span class="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                        </div>
+                        <input id="file-upload" 
+                               name="file" 
+                               type="file" 
+                               accept=".xlsx,.xls"
+                               class="hidden" 
+                               required />
+                    </label>
+                </div>
+                <p id="file-name" class="mt-2 text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Import Options -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-cog text-gray-500 mr-2"></i>
+                    Import Options
+                </h3>
+                <div class="space-y-3">
+                    <label class="flex items-start">
+                        <input type="checkbox" name="skip_duplicates" checked class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Skip duplicate products</span>
+                            <p class="text-xs text-gray-500 mt-1">Duplicate detection based on: Category + Menu Category + Product Name + PLU Code. Exact match will skip and only add new modifiers.</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start">
+                        <input type="checkbox" name="update_existing" class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Update existing products if found</span>
+                            <p class="text-xs text-gray-500 mt-1">Update price, description, and images for existing products. This option overrides "Skip duplicates".</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start">
+                        <input type="checkbox" name="create_modifiers" checked class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Create modifiers from Condiment Groups sheet</span>
+                            <p class="text-xs text-gray-500 mt-1">Process Sheet 2 to create modifier groups and options. Links to products from Sheet 1.</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Sheet Linking Logic Note -->
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <h4 class="text-xs font-medium text-blue-800 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Processing Order & Linking Logic
+                    </h4>
+                    <p class="text-xs text-blue-700">
+                        <strong>Step 1:</strong> Condiment Groups sheet processed FIRST → Creates modifier groups<br>
+                        <strong>Step 2:</strong> Products sheet processed SECOND → Links to groups by name<br>
+                        <strong>Link:</strong> Products "Condiment Groups" column → Group names → Sheet 2 "Group Name"
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'settings:download_two_sheet_template' %}" 
+                   class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-download mr-2"></i>
+                    Download Two Sheet Template
+                </a>
+                
+                <button type="submit" 
+                        class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    <span class="button-text">Upload and Process</span>
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                
+                <a href="{% url 'product:list' %}" 
+                   class="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Products
+                </a>
+            </div>
+        </form>
+
+        <!-- Progress/Results -->
+        <div id="results" class="mt-6"></div>
+    </div>
+</div>
+
+<!-- Log Modal -->
+<div id="logModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeModal()"></div>
+
+        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-semibold text-white" id="modal-title">Import Log Details</h3>
+                    <button onclick="closeModal()" class="text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="modal-content" class="p-4">
+                <div class="flex justify-center items-center py-8">
+                    <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show selected file name
+document.getElementById('file-upload').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || '';
+    const fileNameDisplay = document.getElementById('file-name');
+    if (fileName) {
+        fileNameDisplay.textContent = `Selected: ${fileName}`;
+        fileNameDisplay.classList.add('text-blue-600', 'font-medium');
+    }
+});
+
+// Handle upload response
+document.getElementById('uploadForm').addEventListener('htmx:afterRequest', function(event) {
+    const resultsDiv = document.getElementById('results');
+    
+    if (event.detail.successful) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            
+            if (response.success) {
+                // Ensure stats object exists
+                const stats = response.stats || {};
+                const errors = response.errors || [];
+                
+                resultsDiv.innerHTML = `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                            </div>
+                            <div class="ml-3 w-full">
+                                <h3 class="text-sm font-medium text-green-800">Import Successful!</h3>
+                                <div class="mt-2 text-sm text-green-700">
+                                    <div class="grid grid-cols-2 gap-4 mt-3">
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Processing Summary</p>
+                                            <p>Total Rows: ${stats.processed_rows || 0}</p>
+                                            <p>Successful: ${stats.successful_rows || 0}</p>
+                                            <p>Failed: ${(stats.failed_rows || []).length}</p>
+                                            <p>Skipped: ${stats.products_skipped || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Categories</p>
+                                            <p>Created: ${stats.categories_created || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Products</p>
+                                            <p>Created: ${stats.products_created || 0}</p>
+                                            <p>Updated: ${stats.products_updated || 0}</p>
+                                            <p>Skipped: ${stats.products_skipped || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Auto-Created</p>
+                                            <p>Companies: ${stats.companies_created || 0}</p>
+                                            <p>Brands: ${stats.brands_created || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Modifiers</p>
+                                            <p>Groups: ${stats.modifiers_created || 0}</p>
+                                            <p>Options: ${stats.modifier_options_created || 0}</p>
+                                            <p>Links: ${stats.product_modifiers_created || 0}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Action Buttons -->
+                                    <div class="mt-4 flex flex-wrap gap-2">
+                                        ${(stats.failed_rows && stats.failed_rows.length > 0) ? `
+                                            <button onclick="showFailedRows()" class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition">
+                                                <i class="fas fa-exclamation-triangle mr-2"></i>
+                                                Cek Log Error (${stats.failed_rows.length})
+                                            </button>
+                                        ` : ''}
+                                        <button onclick="showDetailedLog()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                                            <i class="fas fa-list-alt mr-2"></i>
+                                            Lihat Detail Log (${(stats.detailed_log || []).length})
+                                        </button>
+                                        <button onclick="exportLog()" class="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition">
+                                            <i class="fas fa-download mr-2"></i>
+                                            Export Log
+                                        </button>
+                                        <a href="{% url 'product:list' %}" class="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
+                                            <i class="fas fa-eye mr-2"></i>
+                                            Lihat Produk
+                                        </a>
+                                    </div>
+                                    
+                                    ${errors && errors.length > 0 ? `
+                                        <div class="mt-4 bg-yellow-50 p-3 rounded">
+                                            <p class="font-semibold text-yellow-800 mb-2">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                ${errors.length} Warning(s):
+                                            </p>
+                                            <ul class="list-disc list-inside text-yellow-700 text-xs space-y-1 max-h-40 overflow-y-auto">
+                                                ${errors.slice(0, 20).map(err => `<li>${err}</li>`).join('')}
+                                                ${errors.length > 20 ? '<li>... and more</li>' : ''}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Store stats globally for modal functions
+                window.currentImportStats = stats;
+                
+                // Reset form
+                document.getElementById('uploadForm').reset();
+                document.getElementById('file-name').textContent = '';
+                
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Upload Failed</h3>
+                                <p class="mt-2 text-sm text-red-700">${response.message || 'Unknown error occurred'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (parseError) {
+            resultsDiv.innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Response Error</h3>
+                            <p class="mt-2 text-sm text-red-700">Failed to process server response</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        resultsDiv.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Server Error</h3>
+                        <p class="mt-2 text-sm text-red-700">Failed to process file. Please try again.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+
+// Modal functions
+function showFailedRows() {
+    const stats = window.currentImportStats;
+    const failedRows = stats.failed_rows || [];
+    
+    if (failedRows.length === 0) {
+        alert('Tidak ada failed rows untuk ditampilkan');
+        return;
+    }
+    
+    const modalContent = document.getElementById('modal-content');
+    const failedRowsHtml = `
+        <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Failed Rows (${failedRows.length})</h4>
+            <div class="mb-4 p-3 bg-red-50 rounded">
+                <p class="text-sm text-red-800">
+                    <strong>Baris-baris ini gagal diimport karena error. Periksa data di Excel file.</strong>
+                </p>
+            </div>
+            <div class="max-h-96 overflow-y-auto border border-gray-200 rounded">
+                ${failedRows.map(row => `
+                    <div class="border-b border-gray-200 p-3 bg-red-50">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-900">Row ${row.row}: ${row.product_name}</span>
+                            <span class="text-xs px-2 py-1 bg-red-600 text-white rounded-full">${row.error_type}</span>
+                        </div>
+                        <div class="text-xs text-red-600">
+                            <strong>Error:</strong> ${row.error}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = failedRowsHtml;
+    document.getElementById('logModal').classList.remove('hidden');
+}
+
+function showDetailedLog() {
+    const stats = window.currentImportStats;
+    const detailedLog = stats.detailed_log || [];
+    
+    if (detailedLog.length === 0) {
+        alert('Tidak ada detailed log untuk ditampilkan');
+        return;
+    }
+    
+    const modalContent = document.getElementById('modal-content');
+    
+    const summaryHtml = `
+        <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Detailed Processing Log</h4>
+            
+            <!-- Summary -->
+            <div class="mb-6">
+                <h5 class="text-md font-semibold text-gray-800 mb-2">Summary</h5>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-blue-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Total Rows</p>
+                        <p class="text-lg font-bold text-blue-600">${stats.processed_rows}</p>
+                    </div>
+                    <div class="bg-green-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Successful</p>
+                        <p class="text-lg font-bold text-green-600">${stats.successful_rows}</p>
+                    </div>
+                    <div class="bg-red-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Failed</p>
+                        <p class="text-lg font-bold text-red-600">${stats.failed_rows.length}</p>
+                    </div>
+                    <div class="bg-yellow-50 p-3 rounded">
+                        <p class="text-xs text-gray-600">Skipped</p>
+                        <p class="text-lg font-bold text-yellow-600">${stats.products_skipped}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Statistics -->
+            <div class="mb-6">
+                <h5 class="text-md font-semibold text-gray-800 mb-2">Statistics</h5>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Products Created</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.products_created}</p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Products Updated</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.products_updated}</p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Categories Created</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.categories_created}</p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Companies Created</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.companies_created}</p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Brands Created</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.brands_created}</p>
+                    </div>
+                    <div class="border border-gray-200 p-3 rounded">
+                        <p class="text-xs text-gray-600">Modifiers Created</p>
+                        <p class="text-sm font-bold text-gray-900">${stats.modifiers_created}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Processing Log -->
+            <div>
+                <h5 class="text-md font-semibold text-gray-800 mb-2">Processing Steps</h5>
+                <div class="max-h-96 overflow-y-auto border border-gray-200 rounded">
+                    ${detailedLog.map(entry => `
+                        <div class="border-b border-gray-100 p-3 ${entry.status === 'error' ? 'bg-red-50' : entry.status === 'skipped' ? 'bg-yellow-50' : entry.status === 'created' ? 'bg-green-50' : 'bg-gray-50'}">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="text-xs font-medium text-gray-900">Row ${entry.row}: ${entry.raw_data.product_name || 'Unknown'}</span>
+                                <span class="text-xs px-2 py-1 rounded-full ${getStatusClass(entry.status)}">${entry.status}</span>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                ${entry.steps ? entry.steps.join(' → ') : ''}
+                                ${entry.error ? `<br><span class="text-red-600">Error: ${entry.error}</span>` : ''}
+                                ${entry.reason ? `<br><span class="text-yellow-600">Reason: ${entry.reason}</span>` : ''}
+                                ${entry.missing_fields ? `<br><span class="text-yellow-600">Missing: ${entry.missing_fields.join(', ')}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = summaryHtml;
+    document.getElementById('logModal').classList.remove('hidden');
+}
+
+function exportLog() {
+    const stats = window.currentImportStats;
+    
+    // Create downloadable JSON
+    const logData = {
+        timestamp: new Date().toISOString(),
+        stats: stats,
+        summary: {
+            total_rows: stats.processed_rows,
+            successful: stats.successful_rows,
+            failed: stats.failed_rows.length,
+            skipped: stats.products_skipped
+        }
+    };
+    
+    const dataStr = JSON.stringify(logData, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+    
+    const exportFileDefaultName = `import-log-${new Date().toISOString().slice(0,10)}.json`;
+    
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+function getStatusClass(status) {
+    switch(status) {
+        case 'created': return 'bg-green-100 text-green-800';
+        case 'updated': return 'bg-blue-100 text-blue-800';
+        case 'skipped': return 'bg-yellow-100 text-yellow-800';
+        case 'error': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function closeModal() {
+    document.getElementById('logModal').classList.add('hidden');
+}
+</script>
+{% endblock %}

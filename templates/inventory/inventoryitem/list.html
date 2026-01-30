@@ -43,9 +43,9 @@
         </button>
     </div>
 
-    <!-- Filters - Compact -->
+    <!-- Filters - Compact (Brand removed - use Global Filter in header) -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'inventoryitem:list' %}" hx-target="#inventoryitem-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#brand-filter, change from:#item-type-filter">
+        <form method="get" class="flex gap-2" hx-get="{% url 'inventoryitem:list' %}" hx-target="#inventoryitem-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#item-type-filter">
             <div class="flex-1 relative">
                 <input 
                     type="text" 
@@ -56,18 +56,6 @@
                     class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
             </div>
-            
-            <select 
-                name="brand_id" 
-                id="brand-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Brands</option>
-                {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == brand_id %}selected{% endif %}>
-                    {{ brand.name }} - {{ brand.company.name }}
-                </option>
-                {% endfor %}
-            </select>
             
             <select 
                 name="item_type" 
@@ -83,7 +71,7 @@
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or brand_id or item_type %}
+            {% if search or item_type %}
             <a href="{% url 'inventoryitem:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>

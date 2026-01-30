@@ -1,0 +1,297 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Import Products - Settings{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-file-excel text-green-600"></i>
+            Bulk Import Products (Custom Format)
+        </h1>
+        <p class="text-gray-600 mt-2">Upload Excel file with your product data</p>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Excel Format Requirements:</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <p class="font-semibold mb-2">Required Columns (in order):</p>
+                    <ol class="list-decimal list-inside space-y-1 ml-2">
+                        <li><strong>Company Code</strong> - e.g., YOGYA</li>
+                        <li><strong>Brand Code</strong> - e.g., AVRIL</li>
+                        <li><strong>Category</strong> - Parent category (Beverage, Main course, Others, Dessert)</li>
+                        <li><strong>Menu Category</strong> - Child category (Hot Coffee, Iced Coffee, Pasta, etc)</li>
+                        <li><strong>Nama Product</strong> - Product name</li>
+                        <li><strong>PLU Product</strong> - SKU code</li>
+                        <li><strong>Printer_Kitchen</strong> - bar / kitchen / dessert</li>
+                        <li><strong>Condiment Groups</strong> - Modifiers separated by comma (optional)</li>
+                        <li><strong>Price Product</strong> - Product price</li>
+                        <li><strong>Image Product</strong> - Image filename or path</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Upload Instructions -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-image text-yellow-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Product Image Instructions:</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Upload your product images to: <strong class="bg-white px-2 py-1 rounded">static/product/image/</strong></li>
+                        <li>System will automatically extract filename from path</li>
+                        <li>Example: <code>products/Menu_Image_20231203013316.jpg</code> → will use <code>Menu_Image_20231203013316.jpg</code></li>
+                        <li>Supported formats: JPG, PNG, WEBP</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-upload text-blue-500 mr-2"></i>
+            Upload Products Excel
+        </h2>
+        
+        <form id="uploadForm" 
+              hx-post="{% url 'settings:upload_products_excel' %}" 
+              hx-encoding="multipart/form-data"
+              hx-swap="none"
+              class="space-y-4">
+            {% csrf_token %}
+            
+            <!-- File Input -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Excel File (.xlsx or .xls)
+                </label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="file-upload" 
+                           class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                            <p class="mb-2 text-sm text-gray-500">
+                                <span class="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                        </div>
+                        <input id="file-upload" 
+                               name="file" 
+                               type="file" 
+                               accept=".xlsx,.xls"
+                               class="hidden" 
+                               required />
+                    </label>
+                </div>
+                <p id="file-name" class="mt-2 text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Import Options -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                    <i class="fas fa-cog text-gray-500 mr-2"></i>
+                    Import Options
+                </h3>
+                <div class="space-y-3">
+                    <label class="flex items-start">
+                        <input type="checkbox" name="skip_duplicates" checked class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Skip duplicate products</span>
+                            <p class="text-xs text-gray-500 mt-1">Duplicate detection based on: Category + Menu Category + Product Name + PLU Code. Exact match will skip and only add new modifiers.</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start">
+                        <input type="checkbox" name="update_existing" class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Update existing products if found</span>
+                            <p class="text-xs text-gray-500 mt-1">Update price, description, and images for existing products. This option overrides "Skip duplicates".</p>
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start">
+                        <input type="checkbox" name="create_modifiers" checked class="mt-1 mr-3 text-blue-600">
+                        <div>
+                            <span class="text-sm font-medium text-gray-700">Create modifiers from Condiment columns</span>
+                            <p class="text-xs text-gray-500 mt-1">Automatically create product options from Condiment data (e.g., Hot, Ice, Less Sugar).</p>
+                        </div>
+                    </label>
+                </div>
+                
+                <!-- Duplicate Detection Note -->
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <h4 class="text-xs font-medium text-blue-800 mb-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Duplicate Detection
+                    </h4>
+                    <p class="text-xs text-blue-700">
+                        Products are considered duplicates if ALL criteria match: Category + Menu Category + Product Name + PLU Code. 
+                        This allows different products with same names in different categories or menu categories.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center space-x-4">
+                <a href="{% url 'settings:download_products_template' %}" 
+                   class="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-download mr-2"></i>
+                    Download Excel Template
+                </a>
+                
+                <button type="submit" 
+                        class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-file-excel mr-2"></i>
+                    <span class="button-text">Upload and Process</span>
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                
+                <a href="{% url 'product:list' %}" 
+                   class="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-arrow-left mr-2"></i>
+                    Back to Products
+                </a>
+            </div>
+        </form>
+
+        <!-- Progress/Results -->
+        <div id="results" class="mt-6"></div>
+    </div>
+</div>
+
+<script>
+// Show selected file name
+document.getElementById('file-upload').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || '';
+    const fileNameDisplay = document.getElementById('file-name');
+    if (fileName) {
+        fileNameDisplay.textContent = `Selected: ${fileName}`;
+        fileNameDisplay.classList.add('text-blue-600', 'font-medium');
+    }
+});
+
+// Handle upload response
+document.getElementById('uploadForm').addEventListener('htmx:afterRequest', function(event) {
+    const resultsDiv = document.getElementById('results');
+    
+    if (event.detail.successful) {
+        try {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            
+            if (response.success) {
+                // Ensure stats object exists
+                const stats = response.stats || {};
+                const errors = response.errors || [];
+                
+                resultsDiv.innerHTML = `
+                    <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                            </div>
+                            <div class="ml-3 w-full">
+                                <h3 class="text-sm font-medium text-green-800">Import Successful!</h3>
+                                <div class="mt-2 text-sm text-green-700">
+                                    <div class="grid grid-cols-2 gap-4 mt-3">
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Categories</p>
+                                            <p>Created: ${stats.categories_created || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Products</p>
+                                            <p>Created: ${stats.products_created || 0}</p>
+                                            <p>Updated: ${stats.products_updated || 0}</p>
+                                            <p>Skipped: ${stats.products_skipped || 0}</p>
+                                        </div>
+                                        <div class="bg-white p-3 rounded">
+                                            <p class="font-semibold">Modifiers</p>
+                                            <p>Groups: ${stats.modifiers_created || 0}</p>
+                                            <p>Product Links: ${stats.product_modifiers_created || 0}</p>
+                                        </div>
+                                    </div>
+                                    ${errors && errors.length > 0 ? `
+                                        <div class="mt-4 bg-yellow-50 p-3 rounded">
+                                            <p class="font-semibold text-yellow-800 mb-2">
+                                                <i class="fas fa-exclamation-triangle"></i>
+                                                ${errors.length} Warning(s):
+                                            </p>
+                                            <ul class="list-disc list-inside text-yellow-700 text-xs space-y-1 max-h-40 overflow-y-auto">
+                                                ${errors.slice(0, 20).map(err => `<li>${err}</li>`).join('')}
+                                                ${errors.length > 20 ? '<li>... and more</li>' : ''}
+                                            </ul>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Reset form
+                document.getElementById('uploadForm').reset();
+                document.getElementById('file-name').textContent = '';
+                
+            } else {
+                resultsDiv.innerHTML = `
+                    <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">Upload Failed</h3>
+                                <p class="mt-2 text-sm text-red-700">${response.message || 'Unknown error occurred'}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (parseError) {
+            resultsDiv.innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Response Error</h3>
+                            <p class="mt-2 text-sm text-red-700">Failed to process server response</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        resultsDiv.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Server Error</h3>
+                        <p class="mt-2 text-sm text-red-700">Failed to process file. Please try again.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}

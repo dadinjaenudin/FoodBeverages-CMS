@@ -51,9 +51,6 @@
                 <form 
                     method="POST" 
                     action="{% url 'auth:login' %}"
-                    hx-post="{% url 'auth:login' %}"
-                    hx-target="#login-form"
-                    hx-swap="outerHTML"
                     class="space-y-6"
                     id="login-form"
                     x-data="{ loading: false }"

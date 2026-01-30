@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Import - Settings{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-800">
+            <i class="fas fa-file-excel text-green-600"></i>
+            Bulk Import Data
+        </h1>
+        <p class="text-gray-600 mt-2">Upload Excel file to import Categories, Products, and Modifiers</p>
+    </div>
+
+    <!-- Instructions Card -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-info-circle text-blue-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">How to use:</h3>
+                <div class="mt-2 text-sm text-blue-700">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Download the Excel template below</li>
+                        <li><strong>Upload product images</strong> to folder: <code class="bg-white px-2 py-1 rounded">static/product/image/</code></li>
+                        <li>Fill in your data in the 3 sheets: Categories, Products, Modifiers</li>
+                        <li><strong>Important:</strong> Both Company Code and Brand Code are required to prevent data mixing</li>
+                        <li><strong>Product Images:</strong> Write only the filename in "Image Filename" column (e.g., ayam-geprek-001.jpg)</li>
+                        <li>Save the file and upload it here</li>
+                        <li>The system will automatically create or update records</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Upload Instructions -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-image text-yellow-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Product Image Instructions:</h3>
+                <div class="mt-2 text-sm text-yellow-700">
+                    <ol class="list-decimal list-inside space-y-1">
+                        <li>Upload your product images to server folder: <strong>static/product/image/</strong></li>
+                        <li>Use unique filenames with timestamp or UUID (e.g., ayam-geprek-1706025600.jpg)</li>
+                        <li>Supported formats: JPG, PNG, WEBP</li>
+                        <li>In Excel, write only the filename (not full path)</li>
+                        <li>Images will be automatically copied to media folder with unique names</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Download Template -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-download text-green-500 mr-2"></i>
+            Step 1: Download Template
+        </h2>
+        <p class="text-gray-600 mb-4">
+            Download the Excel template with example data and proper format.
+        </p>
+        <a href="{% url 'settings:download_template' %}" 
+           class="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+            <i class="fas fa-file-excel mr-2"></i>
+            Download Excel Template
+        </a>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4 flex items-center">
+            <i class="fas fa-upload text-blue-500 mr-2"></i>
+            Step 2: Upload Filled Excel
+        </h2>
+        
+        <form id="uploadForm" 
+              hx-post="{% url 'settings:upload_excel' %}" 
+              hx-encoding="multipart/form-data"
+              hx-swap="none"
+              class="space-y-4">
+            {% csrf_token %}
+            
+            <!-- File Input -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Select Excel File (.xlsx or .xls)
+                </label>
+                <div class="flex items-center justify-center w-full">
+                    <label for="file-upload" 
+                           class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                            <p class="mb-2 text-sm text-gray-500">
+                                <span class="font-semibold">Click to upload</span> or drag and drop
+                            </p>
+                            <p class="text-xs text-gray-500">Excel files only (.xlsx, .xls)</p>
+                        </div>
+                        <input id="file-upload" 
+                               name="file" 
+                               type="file" 
+                               accept=".xlsx,.xls"
+                               class="hidden" 
+                               required />
+                    </label>
+                </div>
+                <p id="file-name" class="mt-2 text-sm text-gray-600"></p>
+            </div>
+
+            <!-- Upload Button -->
+            <div class="flex items-center space-x-4">
+                <button type="submit" 
+                        class="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-upload mr-2"></i>
+                    <span class="button-text">Upload and Process</span>
+                    <span class="htmx-indicator ml-2">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Progress/Results -->
+        <div id="results" class="mt-6"></div>
+    </div>
+</div>
+
+<script>
+// Show selected file name
+document.getElementById('file-upload').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || '';
+    const fileNameDisplay = document.getElementById('file-name');
+    if (fileName) {
+        fileNameDisplay.textContent = `Selected: ${fileName}`;
+        fileNameDisplay.classList.add('text-blue-600', 'font-medium');
+    }
+});
+
+// Handle upload response
+document.getElementById('uploadForm').addEventListener('htmx:afterRequest', function(event) {
+    const resultsDiv = document.getElementById('results');
+    
+    if (event.detail.successful) {
+        const response = JSON.parse(event.detail.xhr.responseText);
+        
+        if (response.success) {
+            const stats = response.stats;
+            
+            resultsDiv.innerHTML = `
+                <div class="bg-green-50 border-l-4 border-green-500 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3 w-full">
+                            <h3 class="text-sm font-medium text-green-800">Import Successful!</h3>
+                            <div class="mt-2 text-sm text-green-700">
+                                <div class="grid grid-cols-2 gap-4 mt-3">
+                                    <div class="bg-white p-3 rounded">
+                                        <p class="font-semibold">Categories</p>
+                                        <p>Created: ${stats.categories_created}</p>
+                                        <p>Updated: ${stats.categories_updated}</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded">
+                                        <p class="font-semibold">Products</p>
+                                        <p>Created: ${stats.products_created}</p>
+                                        <p>Updated: ${stats.products_updated}</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded">
+                                        <p class="font-semibold">Modifiers</p>
+                                        <p>Created: ${stats.modifiers_created}</p>
+                                    </div>
+                                    <div class="bg-white p-3 rounded">
+                                        <p class="font-semibold">Modifier Options</p>
+                                        <p>Created: ${stats.modifier_options_created}</p>
+                                    </div>
+                                </div>
+                                ${stats.errors.length > 0 ? `
+                                    <div class="mt-4 bg-yellow-50 p-3 rounded">
+                                        <p class="font-semibold text-yellow-800 mb-2">
+                                            <i class="fas fa-exclamation-triangle"></i>
+                                            ${stats.errors.length} Error(s):
+                                        </p>
+                                        <ul class="list-disc list-inside text-yellow-700 text-xs space-y-1">
+                                            ${stats.errors.slice(0, 10).map(err => `<li>${err}</li>`).join('')}
+                                            ${stats.errors.length > 10 ? '<li>... and more</li>' : ''}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Reset form
+            document.getElementById('uploadForm').reset();
+            document.getElementById('file-name').textContent = '';
+            
+        } else {
+            resultsDiv.innerHTML = `
+                <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-800">Upload Failed</h3>
+                            <p class="mt-2 text-sm text-red-700">${response.message}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    } else {
+        resultsDiv.innerHTML = `
+            <div class="bg-red-50 border-l-4 border-red-500 p-4">
+                <div class="flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-times-circle text-red-500 text-xl"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-medium text-red-800">Server Error</h3>
+                        <p class="mt-2 text-sm text-red-700">Failed to process file. Please try again.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}

@@ -56,7 +56,10 @@
         </label>
         {% if company.logo %}
         <div class="mb-2">
-            <img src="{{ company.logo.url }}" alt="{{ company.name }}" class="w-16 h-16 rounded-lg object-cover border border-gray-200">
+            <img src="{{ company.logo.url }}" 
+                 alt="{{ company.name }}" 
+                 class="w-16 h-16 rounded-lg object-cover border border-gray-200"
+                 onerror="this.style.display='none'">
         </div>
         {% endif %}
         <input 

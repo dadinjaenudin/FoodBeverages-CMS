@@ -63,10 +63,12 @@ class Product(models.Model):
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='products')
+    company = models.ForeignKey('core.Company', on_delete=models.PROTECT, related_name='company_products', null=True, blank=True, default=None)  # ← Nullable for migration
     category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name='products')
     sku = models.CharField(max_length=50, help_text="SKU unique per brand")
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
+    image = models.ImageField(upload_to='product_images/', blank=True, null=True, help_text="Main product image")
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     cost = models.DecimalField(
         max_digits=10,
@@ -97,7 +99,7 @@ class Product(models.Model):
         verbose_name = 'Product'
         verbose_name_plural = 'Products'
         ordering = ['sort_order', 'name']
-        unique_together = [['brand', 'sku']]
+        unique_together = [['brand', 'category', 'name', 'sku']]  # Business Logic Constraint (company removed for now)
         indexes = [
             models.Index(fields=['brand', 'is_active']),
             models.Index(fields=['category', 'is_active']),
@@ -106,6 +108,11 @@ class Product(models.Model):
     
     def __str__(self):
         return f"{self.sku} - {self.name}"
+
+    def save(self, *args, **kwargs):
+        if self.brand and not self.company:
+            self.company = self.brand.company
+        super().save(*args, **kwargs)
     
     @property
     def margin(self):
@@ -239,9 +246,18 @@ class TableArea(models.Model):
     Example: Indoor, Outdoor, VIP Room
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey('core.Company', on_delete=models.PROTECT, related_name='table_areas', null=True, blank=True, help_text="Company for multi-tenant isolation")
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='table_areas')
+    store = models.ForeignKey('core.Store', on_delete=models.PROTECT, related_name='table_areas', null=True, blank=True, help_text="Store-specific areas (leave blank for brand-wide)")
     name = models.CharField(max_length=200)
+    description = models.TextField(blank=True, help_text="Description of the area layout")
     sort_order = models.IntegerField(default=0)
+    
+    # Floor plan dimensions (optional)
+    floor_width = models.IntegerField(null=True, blank=True, help_text="Floor width in pixels/units")
+    floor_height = models.IntegerField(null=True, blank=True, help_text="Floor height in pixels/units")
+    floor_image = models.ImageField(upload_to='floor_plans/', null=True, blank=True, help_text="Floor plan image")
+    
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -250,19 +266,33 @@ class TableArea(models.Model):
         db_table = 'table_area'
         verbose_name = 'Table Area'
         verbose_name_plural = 'Table Areas'
-        ordering = ['sort_order', 'name']
+        ordering = ['company', 'brand', 'store', 'sort_order', 'name']
         indexes = [
+            models.Index(fields=['company', 'is_active']),
             models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['store', 'is_active']),
         ]
     
     def __str__(self):
+        if self.store:
+            return f"{self.store.store_name} - {self.name}"
         return f"{self.brand.name} - {self.name}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-populate company from store or brand
+        if not self.company:
+            if self.store:
+                self.company = self.store.brand.company
+            elif self.brand:
+                self.company = self.brand.company
+        super().save(*args, **kwargs)
 
 
-class Table(models.Model):
+class Tables(models.Model):
     """
-    Table - Individual tables in restaurant
+    Tables - Individual tables in restaurant
     Status managed by Edge, HO stores template only
+    Note: Named 'Tables' (plural) to avoid SQL reserved keyword conflict
     """
     STATUS_CHOICES = [
         ('available', 'Available'),
@@ -294,7 +324,7 @@ class Table(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        db_table = 'table'
+        db_table = 'tables'  # Changed from 'table' to 'tables' to avoid SQL keyword
         verbose_name = 'Table'
         verbose_name_plural = 'Tables'
         ordering = ['area', 'number']
@@ -315,7 +345,7 @@ class TableGroup(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='table_groups')
     main_table = models.ForeignKey(
-        Table,
+        Tables,
         on_delete=models.PROTECT,
         related_name='main_table_groups',
         help_text="Primary table in group"
@@ -343,7 +373,7 @@ class TableGroupMember(models.Model):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     table_group = models.ForeignKey(TableGroup, on_delete=models.CASCADE, related_name='members')
-    table = models.ForeignKey(Table, on_delete=models.PROTECT, related_name='group_memberships')
+    table = models.ForeignKey(Tables, on_delete=models.PROTECT, related_name='group_memberships')
     
     class Meta:
         db_table = 'table_group_member'
@@ -363,13 +393,18 @@ class TableGroupMember(models.Model):
 
 class KitchenStation(models.Model):
     """
-    Kitchen Station - Production areas per Brand
-    Example: Main Kitchen, Bar, Dessert
+    Kitchen Station - Production areas per Store (Store-specific only)
+    Example: Main Kitchen, Bar, Dessert Station
+    Multi-company support with proper hierarchy: Company -> Brand -> Store -> Kitchen Station
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    company = models.ForeignKey('core.Company', on_delete=models.PROTECT, related_name='kitchen_stations', help_text="Company for multi-tenant isolation")
     brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='kitchen_stations')
+    store = models.ForeignKey('core.Store', on_delete=models.PROTECT, related_name='kitchen_stations', help_text="Kitchen stations are store-specific")
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=20)
+    description = models.TextField(blank=True, help_text="Description of the kitchen station")
+    sort_order = models.IntegerField(default=0, help_text="Display order")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -378,15 +413,39 @@ class KitchenStation(models.Model):
         db_table = 'kitchen_station'
         verbose_name = 'Kitchen Station'
         verbose_name_plural = 'Kitchen Stations'
-        ordering = ['name']
-        unique_together = [['brand', 'code']]
+        ordering = ['company', 'brand', 'store', 'sort_order', 'name']
+        unique_together = [['company', 'store', 'code']]  # Code unique per company+store combination
         indexes = [
+            models.Index(fields=['company', 'is_active']),
             models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['store', 'is_active']),
+            models.Index(fields=['company', 'brand', 'store']),
             models.Index(fields=['code']),
         ]
     
     def __str__(self):
-        return f"{self.brand.name} - {self.code} - {self.name}"
+        return f"{self.store.store_name} - {self.code} - {self.name}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-populate company and brand from store
+        if self.store and not self.company:
+            self.company = self.store.brand.company
+        if self.store and not self.brand_id:
+            self.brand = self.store.brand
+        super().save(*args, **kwargs)
+    
+    def clean(self):
+        """Validate data consistency"""
+        from django.core.exceptions import ValidationError
+        
+        if self.store:
+            # Ensure store belongs to the specified brand
+            if self.brand and self.store.brand != self.brand:
+                raise ValidationError('Store must belong to the specified brand')
+            
+            # Ensure store belongs to the specified company
+            if self.company and self.store.brand.company != self.company:
+                raise ValidationError('Store must belong to the specified company')
 
 
 class PrinterConfig(models.Model):

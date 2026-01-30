@@ -63,7 +63,7 @@ class Brand(models.Model):
     Example: Ayam Geprek Express, Bakso Boedjangan
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='brands')
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name='brands')
     code = models.CharField(max_length=20, help_text="Brand code (e.g., YGY-001)")
     name = models.CharField(max_length=200, help_text="Brand name")
     address = models.TextField(blank=True)
@@ -125,7 +125,7 @@ class Store(models.Model):
     Example: Cabang BSD, Cabang Senayan
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name='stores')
+    brand = models.ForeignKey(Brand, on_delete=models.CASCADE, related_name='stores')
     store_code = models.CharField(max_length=20, unique=True, help_text="Store code (e.g., YGY-001-BSD)")
     store_name = models.CharField(max_length=200, help_text="Store name")
     address = models.TextField()
@@ -172,20 +172,36 @@ class User(AbstractUser):
     ]
     
     ROLE_SCOPE_CHOICES = [
-        ('store', 'Store Level'),    # Store manager - only 1 store
-        ('brand', 'Brand Level'),    # Brand manager - all stores in 1 brand
+        ('global', 'Global Level'),  # Super Admin - all companies
         ('company', 'Company Level'), # HO admin - all brands & stores
+        ('brand', 'Brand Level'),    # Brand manager - all stores in 1 brand
+        ('store', 'Store Level'),    # Store manager - only 1 store
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name='users')
+    company = models.ForeignKey(
+        Company, 
+        on_delete=models.SET_NULL, 
+        related_name='users',
+        null=True,
+        blank=True,
+        help_text="Company affiliation (can be null if company is deleted)"
+    )
     brand = models.ForeignKey(
         Brand,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         related_name='users',
         null=True,
         blank=True,
         help_text="Leave blank for company-wide users"
+    )
+    store = models.ForeignKey(
+        Store,
+        on_delete=models.SET_NULL,
+        related_name='users',
+        null=True,
+        blank=True,
+        help_text="Leave blank for brand/company-wide users"
     )
     
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='cashier')

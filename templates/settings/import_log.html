@@ -1,0 +1,280 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Logs - F&B HO{% endblock %}
+
+{% block breadcrumb %}
+<nav class="flex" aria-label="Breadcrumb">
+    <ol class="inline-flex items-center space-x-1 md:space-x-2">
+        <li class="inline-flex items-center">
+            <a href="{% url 'dashboard:index' %}" class="text-sm text-gray-700 hover:text-blue-600">
+                <i class="fas fa-home mr-1"></i> Dashboard
+            </a>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
+                <span class="text-sm font-medium text-gray-900">Settings</span>
+            </div>
+        </li>
+        <li>
+            <div class="flex items-center">
+                <i class="fas fa-chevron-right text-xs text-gray-400 mx-2"></i>
+                <span class="text-sm font-medium text-gray-900">Import Logs</span>
+            </div>
+        </li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">Excel Import Logs</h1>
+        <p class="mt-1 text-sm text-gray-600">
+            Detailed logs for Excel import processes. Track successful imports, failures, and errors.
+        </p>
+    </div>
+
+    <!-- Import Summary -->
+    <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-gray-900">Recent Imports</h2>
+            <button onclick="loadLogs()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+                <i class="fas fa-sync-alt mr-2"></i>Refresh
+            </button>
+        </div>
+        
+        <div id="logs-container" class="space-y-4">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-spinner fa-spin text-2xl mb-3"></i>
+                <p>Loading import logs...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Log Modal -->
+    <div id="logModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" onclick="closeModal()"></div>
+
+            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-6xl sm:w-full">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-semibold text-white" id="modal-title">Import Details</h3>
+                        <button onclick="closeModal()" class="text-white hover:text-gray-200">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="modal-content" class="p-4">
+                    <div class="flex justify-center items-center py-8">
+                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentLog = null;
+
+function loadLogs() {
+    fetch('/settings/api/import-logs/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayLogs(data.logs);
+            } else {
+                console.error('Failed to load logs:', data);
+            }
+        })
+        .catch(error => {
+            console.error('Error loading logs:', error);
+        });
+}
+
+function displayLogs(logs) {
+    const container = document.getElementById('logs-container');
+    
+    if (logs.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-file-alt text-4xl mb-3"></i>
+                <p class="text-sm font-medium text-gray-500">No import logs found</p>
+                <p class="text-xs text-gray-400 mt-1">Import logs will appear here after Excel uploads</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = logs.map(log => `
+        <div class="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+            <div class="flex items-center justify-between mb-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900">Import by ${log.user}</h3>
+                    <p class="text-xs text-gray-500">${log.timestamp}</p>
+                </div>
+                <div class="flex items-center space-x-4 text-xs">
+                    <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                        Total: ${log.summary.total_rows}
+                    </span>
+                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                        Success: ${log.summary.successful}
+                    </span>
+                    <span class="px-2 py-1 bg-red-100 text-red-800 rounded-full">
+                        Failed: ${log.summary.failed}
+                    </span>
+                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                        Skipped: ${log.summary.skipped}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="flex space-x-2">
+                <button onclick="showDetails(${JSON.stringify(log).replace(/"/g, '&quot;')})" 
+                        class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition">
+                    <i class="fas fa-eye mr-1"></i>View Details
+                </button>
+                <button onclick="showFailedRows(${JSON.stringify(log.stats.failed_rows).replace(/"/g, '&quot;')})" 
+                        class="px-3 py-1 bg-red-600 text-white text-xs font-medium rounded hover:bg-red-700 transition">
+                    <i class="fas fa-exclamation-triangle mr-1"></i>Failed Rows (${log.stats.failed_rows.length})
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showDetails(log) {
+    currentLog = log;
+    const modalContent = document.getElementById('modal-content');
+    
+    const summaryHtml = `
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Import Summary</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50 p-3 rounded">
+                    <p class="text-xs text-gray-600">Total Rows</p>
+                    <p class="text-lg font-bold text-blue-600">${log.stats.processed_rows}</p>
+                </div>
+                <div class="bg-green-50 p-3 rounded">
+                    <p class="text-xs text-gray-600">Successful</p>
+                    <p class="text-lg font-bold text-green-600">${log.stats.successful_rows}</p>
+                </div>
+                <div class="bg-red-50 p-3 rounded">
+                    <p class="text-xs text-gray-600">Failed</p>
+                    <p class="text-lg font-bold text-red-600">${log.stats.failed_rows.length}</p>
+                </div>
+                <div class="bg-yellow-50 p-3 rounded">
+                    <p class="text-xs text-gray-600">Skipped</p>
+                    <p class="text-lg font-bold text-yellow-600">${log.stats.products_skipped}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Statistics</h4>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Products Created</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.products_created}</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Products Updated</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.products_updated}</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Categories Created</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.categories_created}</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Companies Created</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.companies_created}</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Brands Created</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.brands_created}</p>
+                </div>
+                <div class="border border-gray-200 p-3 rounded">
+                    <p class="text-xs text-gray-600">Modifiers Created</p>
+                    <p class="text-sm font-bold text-gray-900">${log.stats.modifiers_created}</p>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Processing Log</h4>
+            <div class="max-h-96 overflow-y-auto border border-gray-200 rounded">
+                ${log.stats.detailed_log.map(entry => `
+                    <div class="border-b border-gray-100 p-3 ${entry.status === 'error' ? 'bg-red-50' : entry.status === 'skipped' ? 'bg-yellow-50' : entry.status === 'created' ? 'bg-green-50' : 'bg-gray-50'}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-xs font-medium text-gray-900">Row ${entry.row}: ${entry.raw_data.product_name || 'Unknown'}</span>
+                            <span class="text-xs px-2 py-1 rounded-full ${getStatusClass(entry.status)}">${entry.status}</span>
+                        </div>
+                        <div class="text-xs text-gray-600">
+                            ${entry.steps ? entry.steps.join(' → ') : ''}
+                            ${entry.error ? `<br><span class="text-red-600">Error: ${entry.error}</span>` : ''}
+                            ${entry.reason ? `<br><span class="text-yellow-600">Reason: ${entry.reason}</span>` : ''}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = summaryHtml;
+    document.getElementById('logModal').classList.remove('hidden');
+}
+
+function showFailedRows(failedRows) {
+    if (failedRows.length === 0) {
+        alert('No failed rows to show');
+        return;
+    }
+    
+    const modalContent = document.getElementById('modal-content');
+    const failedRowsHtml = `
+        <div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-3">Failed Rows (${failedRows.length})</h4>
+            <div class="max-h-96 overflow-y-auto">
+                ${failedRows.map(row => `
+                    <div class="border-b border-gray-200 p-3 bg-red-50">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-sm font-medium text-gray-900">Row ${row.row}: ${row.product_name}</span>
+                            <span class="text-xs px-2 py-1 bg-red-600 text-white rounded-full">${row.error_type}</span>
+                        </div>
+                        <div class="text-xs text-red-600">
+                            <strong>Error:</strong> ${row.error}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = failedRowsHtml;
+    document.getElementById('logModal').classList.remove('hidden');
+}
+
+function getStatusClass(status) {
+    switch(status) {
+        case 'created': return 'bg-green-100 text-green-800';
+        case 'updated': return 'bg-blue-100 text-blue-800';
+        case 'skipped': return 'bg-yellow-100 text-yellow-800';
+        case 'error': return 'bg-red-100 text-red-800';
+        default: return 'bg-gray-100 text-gray-800';
+    }
+}
+
+function closeModal() {
+    document.getElementById('logModal').classList.add('hidden');
+}
+
+// Load logs on page load
+document.addEventListener('DOMContentLoaded', loadLogs);
+</script>
+{% endblock %}

@@ -9,6 +9,7 @@ from .models import (
     Voucher, PromotionUsage, PromotionLog, CustomerPromotionHistory,
     PromotionApproval
 )
+from .models_settings import PromotionSyncSettings
 
 
 class PackageItemInline(admin.TabularInline):
@@ -253,3 +254,28 @@ class PromotionApprovalAdmin(admin.ModelAdmin):
                        'requested_at', 'responded_at']
     autocomplete_fields = ['promotion', 'requested_by', 'approved_by']
     date_hierarchy = 'requested_at'
+
+
+@admin.register(PromotionSyncSettings)
+class PromotionSyncSettingsAdmin(admin.ModelAdmin):
+    list_display = ['company', 'sync_strategy', 'future_days', 'past_days', 'auto_sync_enabled', 'updated_at']
+    list_filter = ['sync_strategy', 'auto_sync_enabled', 'enable_compression']
+    search_fields = ['company__name']
+    readonly_fields = ['updated_at', 'updated_by']
+    fieldsets = (
+        ('Company', {
+            'fields': ('company',)
+        }),
+        ('Sync Strategy', {
+            'fields': ('sync_strategy', 'future_days', 'past_days', 'include_inactive')
+        }),
+        ('Auto-Sync Settings', {
+            'fields': ('auto_sync_enabled', 'sync_interval_hours')
+        }),
+        ('Advanced Options', {
+            'fields': ('max_promotions_per_sync', 'enable_compression')
+        }),
+        ('Audit', {
+            'fields': ('updated_at', 'updated_by')
+        }),
+    )

@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Preview Compiled JSON</h1>
+            <p class="text-gray-600 mt-1">{{ promotion.code }} - {{ promotion.name }}</p>
+        </div>
+        <div class="flex space-x-3">
+            <button onclick="copyToClipboard()"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
+                <i class="fas fa-copy"></i>
+                <span>Copy JSON</span>
+            </button>
+            <button onclick="downloadJSON()"
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2">
+                <i class="fas fa-download"></i>
+                <span>Download</span>
+            </button>
+            <a href="{% url 'promotion:compiler_dashboard' %}"
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Promotion Info -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+                <p class="text-sm text-gray-600">Code</p>
+                <p class="font-semibold text-gray-900">{{ promotion.code }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Type</p>
+                <p class="font-semibold text-gray-900">{{ promotion.get_promo_type_display }}</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Status</p>
+                {% if promotion.is_active %}
+                <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Active</span>
+                {% else %}
+                <span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Inactive</span>
+                {% endif %}
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Validity</p>
+                <p class="font-semibold text-gray-900 text-sm">{{ promotion.start_date }} - {{ promotion.end_date }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- JSON Preview -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-900">Compiled JSON Output</h2>
+            <span class="text-sm text-gray-500">Ready for Edge Server</span>
+        </div>
+        <div class="p-6">
+            <pre id="json-content" class="bg-gray-50 rounded-lg p-4 overflow-x-auto text-sm"><code class="language-json">{{ json_data }}</code></pre>
+        </div>
+    </div>
+
+    <!-- Copy Notification -->
+    <div id="copy-notification" class="hidden fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg">
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-check-circle"></i>
+            <span>JSON copied to clipboard!</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const jsonData = {{ json_data|safe }};
+
+function copyToClipboard() {
+    const jsonContent = document.getElementById('json-content').textContent;
+    navigator.clipboard.writeText(jsonContent).then(() => {
+        showNotification();
+    });
+}
+
+function downloadJSON() {
+    const dataStr = jsonData;
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `{{ promotion.code }}_compiled.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+function showNotification() {
+    const notification = document.getElementById('copy-notification');
+    notification.classList.remove('hidden');
+    setTimeout(() => {
+        notification.classList.add('hidden');
+    }, 3000);
+}
+
+// Syntax highlighting (optional - if you have Prism.js)
+if (typeof Prism !== 'undefined') {
+    Prism.highlightAll();
+}
+</script>
+
+{% endblock %}

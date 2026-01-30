@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     
     # Third-party apps
     'rest_framework',
@@ -46,6 +47,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'drf_spectacular',  # API Documentation
     'django_htmx',      # HTMX integration
+    'django_celery_beat',  # Celery Beat Scheduler
     
     # Local apps
     'core',           # Multi-tenant core (Company, Brand, Store, User)
@@ -56,6 +58,7 @@ INSTALLED_APPS = [
     'transactions',   # Transaction data from Edge
     'analytics',      # Reporting & Analytics
     'dashboard',      # Dashboard & UI
+    'settings',       # Settings & Bulk Import
 ]
 
 MIDDLEWARE = [
@@ -69,6 +72,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.GlobalFilterMiddleware',  # Global Filter Middleware
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -84,6 +88,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.global_filters',  # Global Filter Context
             ],
         },
     },
@@ -194,7 +199,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -235,6 +239,8 @@ CORS_ALLOW_ALL_ORIGINS = DEBUG  # Only in development
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://127.0.0.1:3000',
+    'http://localhost:8002',
+    'http://127.0.0.1:8002',
 ]
 CORS_ALLOW_CREDENTIALS = True
 
@@ -399,109 +405,82 @@ All API endpoints require JWT authentication:
      "password": "your_password"
    }
    ```
-   
-2. **Use Token**: Add header to requests:
+
+2. **Use Token**: Add to headers:
    ```
-   Authorization: Bearer <access_token>
+   Authorization: Bearer <your_access_token>
    ```
 
 3. **Refresh Token**: `POST /api/token/refresh/`
    ```json
    {
-     "refresh": "<refresh_token>"
+     "refresh": "your_refresh_token"
    }
    ```
 
-## API Categories
+## Multi-Tenant Architecture
 
-### 1. Core API - Multi-Tenant Master Data
-- Company, Brand, Store, User management
-- Base URL: `/api/v1/core/`
+- **Company**: Root tenant (e.g., Yogya Group)
+- **Brand**: Business concept (e.g., Ayam Geprek Express)
+- **Store**: Physical location (e.g., BSD Store)
+- **User**: Role-based access with scope (GLOBAL, COMPANY, BRAND, STORE)
 
-### 2. Products API - Product Catalog
-- Categories, Products, Modifiers, Tables
-- Base URL: `/api/v1/products/`
+## Key Features
 
-### 3. Members API - Loyalty Program (Bidirectional)
-- Member registration, lookup, transactions
-- Base URL: `/api/v1/members/`
+### Master Data Management
+- Company, Brand, Store hierarchy
+- Product catalog with categories, modifiers
+- Member loyalty program
+- Promotion engine (12+ types)
+- Inventory & recipe management (BOM)
 
-### 4. Promotions API - Promotion Engine
-- 12+ promotion types, vouchers, usage tracking
-- Base URL: `/api/v1/promotions/`
+### Sync API (HO ↔ Edge)
+- **HO → Edge**: Master data pull with incremental sync
+- **Edge → HO**: Transaction data push (async)
+- JWT authentication with brand/store filtering
 
-### 5. Inventory API - Inventory & Recipe (BOM)
-- Inventory items, recipes with ingredients
-- Base URL: `/api/v1/inventory/`
+### Promotion Engine
+- 12+ promotion types (BOGO, Happy Hour, Package, etc.)
+- Multi-brand scope support
+- Stacking rules & conflict resolution
+- Manager approval workflow
+- Explainability logs
 
-### 6. Transactions API - Transaction Push (Edge → HO)
-- Bills, payments, sessions, refunds
-- Base URL: `/api/v1/transactions/`
+### Member Loyalty
+- Auto-generated member codes
+- Points earn/redeem/topup/payment
+- Tier system (Bronze, Silver, Gold, Platinum)
+- Points expiry automation
+- Full audit trail
 
-### 7. Analytics API - Reporting & Analytics
-- Sales reports, product analysis, member analytics
-- Base URL: `/api/v1/analytics/`
+## API Versioning
 
-## Sync Workflow
+Current version: **v1**
 
-### Edge Startup Sync
-1. Obtain JWT token
-2. Pull company/brand/store data
-3. Pull users for brand
-4. Pull products, categories, modifiers
-5. Pull promotions (active only)
-6. Pull inventory items & recipes
-7. Pull members (company-wide)
-
-### Periodic Sync (Every 5 minutes)
-Use `last_sync` parameter for incremental sync:
-```
-GET /api/v1/products/products/sync/?brand_id=xxx&last_sync=2024-01-22T10:30:00Z
-```
-
-### Transaction Push (After bill paid / EOD)
-```
-POST /api/v1/transactions/bills/push/
-POST /api/v1/transactions/bulk-push/
-```
-
-## Response Format
-
-Standard success response:
-```json
-{
-  "count": 10,
-  "last_sync": "2024-01-22T12:00:00Z",
-  "data": [...]
-}
-```
-
-Standard error response:
-```json
-{
-  "error": "Error message",
-  "detail": "Detailed error information"
-}
-```
-
-## Common Query Parameters
-
-- `brand_id`: Filter by brand (UUID)
-- `store_id`: Filter by store (UUID)
-- `company_id`: Filter by company (UUID)
-- `last_sync`: ISO datetime for incremental sync
-- `start_date`: Date range start (YYYY-MM-DD)
-- `end_date`: Date range end (YYYY-MM-DD)
+Base URL: `/api/v1/`
 
 ## Rate Limiting
 
-- Default: 100 requests per minute per user
-- Bulk operations: 10 requests per minute
+- 1000 requests per hour per user
+- 100 requests per minute per IP
+
+## Error Handling
+
+Standard HTTP status codes with detailed error messages:
+
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "field_name": ["This field is required."]
+  },
+  "code": "validation_error"
+}
+```
 
 ## Support
 
-- Repository: https://github.com/dadinjaenudin/FoodBeverages-CMS
-- Documentation: See README.md
+For API support, contact: dev@company.com
     ''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
@@ -510,15 +489,46 @@ Standard error response:
         'persistAuthorization': True,
         'displayOperationId': True,
         'displayRequestDuration': True,
-        'filter': True,
         'docExpansion': 'none',
-        'defaultModelsExpandDepth': 2,
-        'defaultModelExpandDepth': 2,
+        'filter': True,
+        'showExtensions': True,
+        'showCommonExtensions': True,
+        'tryItOutEnabled': True,
     },
+    'REDOC_UI_SETTINGS': {
+        'hideDownloadButton': False,
+        'hideHostname': False,
+        'hideLoading': False,
+        'hideSchemaPattern': True,
+        'expandResponses': '200,201',
+        'pathInMiddlePanel': True,
+        'requiredPropsFirst': True,
+        'scrollYOffset': 0,
+        'showExtensions': True,
+        'sortPropsAlphabetically': True,
+        'suppressWarnings': True,
+        'theme': {
+            'colors': {
+                'primary': {
+                    'main': '#1976d2'
+                }
+            },
+            'typography': {
+                'fontSize': '14px',
+                'lineHeight': '1.5em',
+                'code': {
+                    'fontSize': '13px',
+                    'fontFamily': 'Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace'
+                }
+            }
+        }
+    },
+    'defaultModelsExpandDepth': 2,
+    'defaultModelExpandDepth': 2,
     'COMPONENT_SPLIT_REQUEST': True,
     'SORT_OPERATIONS': True,
     'SERVERS': [
-        {'url': 'http://localhost:8000', 'description': 'Development server'},
+        {'url': 'http://localhost:8002', 'description': 'Development server'},
         {'url': 'https://api.yogyagroup.com', 'description': 'Production server'},
     ],
     'TAGS': [
@@ -561,7 +571,6 @@ Standard error response:
     'ENUM_NAME_OVERRIDES': {},
 }
 
-
 # Authentication URLs
 LOGIN_URL = 'auth:login'
 LOGIN_REDIRECT_URL = 'dashboard:index'
@@ -573,5 +582,7 @@ CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
 CSRF_TRUSTED_ORIGINS = [
     'https://8000-i56a4gtwdhxhy7tubdwem-583b4d74.sandbox.novita.ai',
     'https://*.sandbox.novita.ai',
+    'http://localhost:8002',
+    'http://127.0.0.1:8002',
 ]
 

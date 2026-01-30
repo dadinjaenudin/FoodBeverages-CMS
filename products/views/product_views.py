@@ -16,12 +16,14 @@ from core.models import Brand
 def product_list(request):
     """List all products with search and filter"""
     search = request.GET.get('search', '').strip()
-    brand_id = request.GET.get('brand', '')
     category_id = request.GET.get('category', '')
     page = request.GET.get('page', 1)
     
-    # Base queryset
-    products = Product.objects.select_related('brand', 'category').prefetch_related('photos')
+    # Base queryset with modifiers
+    products = Product.objects.select_related('brand', 'category').prefetch_related(
+        'photos',
+        'product_modifiers__modifier'
+    )
     
     # Apply search
     if search:
@@ -31,13 +33,21 @@ def product_list(request):
             Q(description__icontains=search)
         )
     
-    # Apply brand filter
-    if brand_id:
-        products = products.filter(brand_id=brand_id)
+    # Apply Global Filters (from Middleware) - Brand filter controlled in header
+    current_company = getattr(request, 'current_company', None)
+    current_brand = getattr(request, 'current_brand', None)
+
+    if current_brand:
+        products = products.filter(brand=current_brand)
+    elif current_company:
+        products = products.filter(brand__company=current_company)
     
-    # Apply category filter
+    # Apply category filter (local page filter)
     if category_id:
-        products = products.filter(category_id=category_id)
+        products = products.filter(
+            Q(category_id=category_id) |
+            Q(category__parent_id=category_id)
+        )
     
     # Apply ordering
     products = products.order_by('sort_order', 'name')
@@ -46,25 +56,29 @@ def product_list(request):
     paginator = Paginator(products, 10)
     products_page = paginator.get_page(page)
     
-    # Get brands and categories for filter
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    categories = Category.objects.filter(is_active=True).select_related('brand').order_by('brand__name', 'name')
+    # Get categories for filter (filtered by global brand context)
+    categories_qs = Category.objects.filter(is_active=True, parent__isnull=True).select_related('brand')
     
-    if request.headers.get('HX-Request'):
-        return render(request, 'products/product/_table.html', {
-            'products': products_page,
-            'brands': brands,
-            'categories': categories
-        })
+    # Filter categories based on global context
+    if current_brand:
+        categories_qs = categories_qs.filter(brand=current_brand)
+    elif current_company:
+        categories_qs = categories_qs.filter(brand__company=current_company)
+        
+    categories = categories_qs.order_by('brand__name', 'name')
     
-    return render(request, 'products/product/list.html', {
+    context = {
         'products': products_page,
-        'brands': brands,
         'categories': categories,
         'search': search,
-        'selected_brand': brand_id,
-        'selected_category': category_id
-    })
+        'selected_category': category_id,
+        'total_count': products.count()
+    }
+    
+    if request.headers.get('HX-Request'):
+        return render(request, 'products/product/_table.html', context)
+    
+    return render(request, 'products/product/list.html', context)
 
 
 @login_required
@@ -73,13 +87,17 @@ def product_create(request):
     """Create new product with image upload"""
     if request.method == 'POST':
         try:
+            # Get brand from global filter or POST
             brand_id = request.POST.get('brand_id')
+            if not brand_id and hasattr(request, 'current_brand') and request.current_brand:
+                brand_id = request.current_brand.id
+            
             category_id = request.POST.get('category_id')
             sku = request.POST.get('sku', '').strip()
             name = request.POST.get('name', '').strip()
             description = request.POST.get('description', '').strip()
-            price = request.POST.get('price', '0')
-            cost = request.POST.get('cost', '0')
+            price = request.POST.get('price', '0').replace(',', '')
+            cost = request.POST.get('cost', '0').replace(',', '')
             printer_target = request.POST.get('printer_target', 'kitchen')
             track_stock = request.POST.get('track_stock') == 'on'
             stock_quantity = request.POST.get('stock_quantity', '0')
@@ -106,11 +124,11 @@ def product_create(request):
                 sku=sku,
                 name=name,
                 description=description,
-                price=float(price),
-                cost=float(cost) if cost else 0,
+                price=float(price.replace(',', '')),
+                cost=float(cost.replace(',', '')) if cost else 0,
                 printer_target=printer_target,
                 track_stock=track_stock,
-                stock_quantity=float(stock_quantity) if stock_quantity else 0,
+                stock_quantity=float(stock_quantity.replace(',', '')) if stock_quantity else 0,
                 sort_order=int(sort_order) if sort_order else 0,
                 is_active=is_active
             )
@@ -133,20 +151,31 @@ def product_create(request):
             })
             
         except Exception as e:
+            logger.error(f"Error updating product: {str(e)}")
+            logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
                 'message': str(e)
             }, status=500)
     
     # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    categories = Category.objects.filter(is_active=True).select_related('brand').order_by('brand__name', 'name')
+    # Filter categories by current brand from global filter
+    categories_qs = Category.objects.filter(is_active=True).select_related('brand')
+    
+    if hasattr(request, 'current_brand') and request.current_brand:
+        categories_qs = categories_qs.filter(brand=request.current_brand)
+    
+    categories = categories_qs.order_by('name')
     
     return render(request, 'products/product/_form.html', {
-        'brands': brands,
         'categories': categories
     })
 
+
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 @login_required
 @require_http_methods(["GET", "POST"])
@@ -189,11 +218,11 @@ def product_update(request, pk):
             product.sku = sku
             product.name = name
             product.description = description
-            product.price = float(price)
-            product.cost = float(cost) if cost else 0
+            product.price = float(price.replace(',', ''))
+            product.cost = float(cost.replace(',', '')) if cost else 0
             product.printer_target = printer_target
             product.track_stock = track_stock
-            product.stock_quantity = float(stock_quantity) if stock_quantity else 0
+            product.stock_quantity = float(stock_quantity.replace(',', '')) if stock_quantity else 0
             product.sort_order = int(sort_order) if sort_order else 0
             product.is_active = is_active
             product.save()
@@ -220,6 +249,8 @@ def product_update(request, pk):
             })
             
         except Exception as e:
+            logger.error(f"Error updating product: {str(e)}")
+            logger.error(traceback.format_exc())
             return JsonResponse({
                 'success': False,
                 'message': str(e)

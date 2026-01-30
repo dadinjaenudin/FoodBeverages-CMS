@@ -36,10 +36,6 @@ class Command(BaseCommand):
         company = Company.objects.create(
             code='YGY',
             name='Yogya Group',
-            address='Jakarta, Indonesia',
-            phone='+62-21-1234567',
-            email='info@yogyagroup.com',
-            tax_id='01.234.567.8-901.000',
             is_active=True,
             point_expiry_months=12,
             points_per_currency=Decimal('1.00')
@@ -51,10 +47,8 @@ class Command(BaseCommand):
             company=company,
             code='YGY-001',
             name='Ayam Geprek Express',
-            description='Spicy Fried Chicken',
             address='Jakarta',
             phone='+62-21-1111111',
-            email='geprek@yogyagroup.com',
             tax_id='01.234.567.8-901.001',
             tax_rate=Decimal('11.00'),
             service_charge=Decimal('5.00'),
@@ -230,6 +224,9 @@ class Command(BaseCommand):
             )
         self.stdout.write('✅ Sample members created')
         
+        # Generate table areas and tables
+        self.generate_table_areas()
+        
         self.stdout.write(self.style.SUCCESS('\n✨ Sample data generation complete!'))
         self.stdout.write(self.style.SUCCESS('\n📋 Login credentials:'))
         self.stdout.write('  Admin: admin / admin123')
@@ -256,3 +253,112 @@ class Command(BaseCommand):
         Company.objects.all().delete()
         
         self.stdout.write(self.style.WARNING('✓ Data cleared'))
+    
+    def generate_table_areas(self):
+        """Generate sample table areas and tables"""
+        from products.models import TableArea, Tables
+        import random
+        
+        self.stdout.write('\n🏢 Creating Table Areas and Tables...')
+        
+        # Get brands
+        brands = Brand.objects.filter(is_active=True)
+        if not brands.exists():
+            self.stdout.write(self.style.WARNING('No brands found, skipping table areas'))
+            return
+        
+        # Table area configurations
+        areas_config = [
+            {
+                'name': 'Indoor Main Hall', 
+                'sort_order': 1,
+                'tables': [
+                    {'number': 'A1', 'capacity': 4, 'pos_x': 100, 'pos_y': 100},
+                    {'number': 'A2', 'capacity': 4, 'pos_x': 200, 'pos_y': 100},
+                    {'number': 'A3', 'capacity': 6, 'pos_x': 300, 'pos_y': 100},
+                    {'number': 'A4', 'capacity': 2, 'pos_x': 100, 'pos_y': 200},
+                    {'number': 'A5', 'capacity': 4, 'pos_x': 200, 'pos_y': 200},
+                    {'number': 'A6', 'capacity': 8, 'pos_x': 300, 'pos_y': 200},
+                ]
+            },
+            {
+                'name': 'Outdoor Terrace', 
+                'sort_order': 2,
+                'tables': [
+                    {'number': 'T1', 'capacity': 4, 'pos_x': 150, 'pos_y': 50},
+                    {'number': 'T2', 'capacity': 4, 'pos_x': 250, 'pos_y': 50},
+                    {'number': 'T3', 'capacity': 6, 'pos_x': 150, 'pos_y': 150},
+                    {'number': 'T4', 'capacity': 2, 'pos_x': 250, 'pos_y': 150},
+                ]
+            },
+            {
+                'name': 'VIP Room', 
+                'sort_order': 3,
+                'tables': [
+                    {'number': 'VIP1', 'capacity': 8, 'pos_x': 200, 'pos_y': 100},
+                    {'number': 'VIP2', 'capacity': 12, 'pos_x': 200, 'pos_y': 250},
+                ]
+            },
+            {
+                'name': 'Private Dining', 
+                'sort_order': 4,
+                'tables': [
+                    {'number': 'PD1', 'capacity': 10, 'pos_x': 150, 'pos_y': 100},
+                    {'number': 'PD2', 'capacity': 6, 'pos_x': 250, 'pos_y': 100},
+                ]
+            },
+            {
+                'name': 'Bar Area', 
+                'sort_order': 5,
+                'tables': [
+                    {'number': 'B1', 'capacity': 2, 'pos_x': 100, 'pos_y': 50},
+                    {'number': 'B2', 'capacity': 2, 'pos_x': 150, 'pos_y': 50},
+                    {'number': 'B3', 'capacity': 4, 'pos_x': 200, 'pos_y': 50},
+                    {'number': 'B4', 'capacity': 2, 'pos_x': 250, 'pos_y': 50},
+                    {'number': 'B5', 'capacity': 2, 'pos_x': 300, 'pos_y': 50},
+                ]
+            }
+        ]
+        
+        # Create areas and tables for each brand
+        total_areas_created = 0
+        total_tables_created = 0
+        
+        for brand in brands:
+            for area_config in areas_config:
+                # Create or get table area
+                area, area_created = TableArea.objects.get_or_create(
+                    brand=brand,
+                    name=area_config['name'],
+                    defaults={
+                        'sort_order': area_config['sort_order'],
+                        'is_active': True
+                    }
+                )
+                
+                if area_created:
+                    total_areas_created += 1
+                    self.stdout.write(f'  📍 Created area: {area.name} ({brand.name})')
+                    
+                    # Create tables for this area
+                    for table_config in area_config['tables']:
+                        # Random status for demo
+                        statuses = ['available', 'occupied', 'reserved']
+                        weights = [0.6, 0.3, 0.1]  # 60% available, 30% occupied, 10% reserved
+                        status = random.choices(statuses, weights=weights)[0]
+                        
+                        table = Tables.objects.create(
+                            area=area,
+                            number=table_config['number'],
+                            capacity=table_config['capacity'],
+                            pos_x=table_config['pos_x'],
+                            pos_y=table_config['pos_y'],
+                            status=status,
+                            is_active=True,
+                            qr_code=f"QR-{brand.name.replace(' ', '')}-{area.name.replace(' ', '')}-{table_config['number']}"
+                        )
+                        total_tables_created += 1
+                        status_icon = {'available': '🟢', 'occupied': '🔴', 'reserved': '🟡'}[status]
+                        self.stdout.write(f'    🪑 Table {table.number} - {table.capacity} seats {status_icon}')
+        
+        self.stdout.write(f'✅ Table Areas: {total_areas_created} areas, {total_tables_created} tables created')

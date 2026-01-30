@@ -13,9 +13,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Drop old kitchen_station table
+        # Drop old kitchen_station table with CASCADE
         migrations.RunSQL(
-            sql='DROP TABLE IF EXISTS kitchen_station;',
+            sql='DROP TABLE IF EXISTS kitchen_station CASCADE;',
             reverse_sql='SELECT 1;'
         ),
         

@@ -1,80 +1,133 @@
-<!-- Category Table - Ultra Compact -->
+<!-- DEBUG: Total categories = {{ categories|length }} -->
+<!-- Category Table - Tree View (F&B Optimized) -->
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+        <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
             <tr>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Icon</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Category Name</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Brand</th>
-                <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Parent</th>
-                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Products</th>
-                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Sort</th>
-                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
-                <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+                <th scope="col" class="px-3 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <i class="fas fa-sitemap mr-2 text-purple-600"></i>Category Tree
+                </th>
+                <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <i class="fas fa-box mr-1 text-green-600"></i>Products
+                </th>
+                <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <i class="fas fa-sort mr-1 text-blue-600"></i>Order
+                </th>
+                <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    <i class="fas fa-toggle-on mr-1 text-teal-600"></i>Status
+                </th>
+                <th scope="col" class="px-3 py-3 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
             </tr>
         </thead>
-        <tbody class="bg-white divide-y divide-gray-200">
-            {% for category in categories %}
-            <tr class="hover:bg-gray-50 transition">
-                <td class="px-3 py-2 whitespace-nowrap">
-                    <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                        {% if category.icon %}
-                        <i class="fas {{ category.icon }} text-purple-600 text-sm"></i>
-                        {% else %}
-                        <i class="fas fa-folder text-purple-600 text-sm"></i>
-                        {% endif %}
+        
+        {% for category in categories %}
+        <!-- DEBUG: Rendering {{ category.name }} (ID: {{ category.id }}) -->
+        <tbody class="bg-white" x-data="{ expanded: false }">
+            <!-- Parent Category Row with Tree Structure -->
+            <tr class="border-b border-gray-100 hover:bg-blue-50 transition-all duration-150 {% if not search and category.children.all %}cursor-pointer{% endif %} {% if not category.parent %}bg-purple-50{% endif %}" 
+                {% if not search and category.children.all %}@click="expanded = !expanded"{% endif %}>
+                
+                <!-- Category Tree Column (merged: expand + icon + name) -->
+                <td class="px-3 py-2.5">
+                    <div class="flex items-center">
+                        <!-- Expand/Collapse Icon -->
+                        <div class="w-6 flex-shrink-0">
+                            {% if not search and category.children.all %}
+                            <div class="w-6 h-6 flex items-center justify-center rounded hover:bg-blue-100 transition">
+                                <i class="fas fa-chevron-right text-xs text-gray-500 transition-transform duration-200"
+                                   :class="{ 'rotate-90 text-blue-600': expanded }"></i>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Icon -->
+                        <div class="w-8 h-8 rounded-lg {% if not category.parent %}bg-gradient-to-br from-purple-500 to-purple-600{% else %}bg-purple-100{% endif %} flex items-center justify-center flex-shrink-0 shadow-sm">
+                            {% if category.icon %}
+                            <i class="fas {{ category.icon }} {% if not category.parent %}text-white{% else %}text-purple-600{% endif %} text-sm"></i>
+                            {% else %}
+                            <i class="fas {% if not category.parent %}fa-folder{% else %}fa-folder-open{% endif %} {% if not category.parent %}text-white{% else %}text-purple-600{% endif %} text-sm"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Name with Level Badge -->
+                        <div class="ml-3 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-semibold {% if not category.parent %}text-purple-900{% else %}text-gray-900{% endif %}">
+                                    {{ category.name }}
+                                </span>
+                                <span class="text-xs text-gray-400">({{ category.id|slice:":8" }}...)</span>
+                                {% if not category.parent %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-purple-600 text-white">
+                                    L1
+                                </span>
+                                {% endif %}
+                                {% if category.children.all %}
+                                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
+                                    <i class="fas fa-sitemap mr-1"></i>{{ category.children.all.count }}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-0.5">
+                                {% if category.parent %}
+                                <i class="fas fa-level-up-alt mr-1"></i>{{ category.parent.name }}
+                                {% else %}
+                                <i class="fas fa-folder-tree mr-1"></i>Top Level Category
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
                 </td>
-                <td class="px-3 py-2">
-                    <div class="text-xs font-medium text-gray-900">{{ category.name }}</div>
-                    <div class="text-xs text-gray-500">Sort: {{ category.sort_order }}</div>
-                </td>
-                <td class="px-3 py-2">
-                    <div class="text-xs text-gray-900">{{ category.brand.name }}</div>
-                    <div class="text-xs text-gray-500">{{ category.brand.company.name }}</div>
-                </td>
-                <td class="px-3 py-2">
-                    {% if category.parent %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        <i class="fas fa-level-up-alt text-xs mr-1"></i>
-                        {{ category.parent.name }}
-                    </span>
-                    {% else %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">
-                        <i class="fas fa-folder text-xs mr-1"></i>
-                        Top Level
-                    </span>
-                    {% endif %}
-                </td>
-                <td class="px-3 py-2 text-center">
-                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                
+                <!-- Products Count -->
+                <td class="px-3 py-2.5 text-center">
+                    <span class="inline-flex items-center justify-center w-10 h-10 rounded-full text-sm font-bold {% if category.product_count > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-400{% endif %}">
                         {{ category.product_count|default:0 }}
                     </span>
                 </td>
-                <td class="px-3 py-2 text-center">
-                    <span class="text-xs font-medium text-gray-700">{{ category.sort_order }}</span>
+                
+                <!-- Sort Order -->
+                <td class="px-3 py-2.5 text-center">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700">
+                        {{ category.sort_order }}
+                    </span>
                 </td>
-                <td class="px-3 py-2 text-center whitespace-nowrap">
+                
+                <!-- Status -->
+                <td class="px-3 py-2.5 text-center whitespace-nowrap">
                     {% if category.is_active %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                        <i class="fas fa-check-circle text-xs mr-1"></i> Active
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle mr-1"></i>Active
                     </span>
                     {% else %}
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                        <i class="fas fa-times-circle text-xs mr-1"></i> Inactive
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                        <i class="fas fa-times-circle mr-1"></i>Inactive
                     </span>
                     {% endif %}
                 </td>
-                <td class="px-3 py-2 text-center whitespace-nowrap">
+                
+                <!-- Actions -->
+                <td class="px-3 py-2.5 text-center whitespace-nowrap" @click.stop>
                     <div class="flex items-center justify-center gap-1">
+                        {% if not category.parent %}
                         <button 
-                            @click="showModal = true; modalTitle = 'Edit Category'; modalUrl = '{% url "category:edit" category.pk %}'"
+                            @click="showModal = true; modalTitle = 'Add Subcategory'"
+                            hx-get="{% url 'category:create' %}?parent={{ category.pk }}"
+                            hx-target="#modal-content"
+                            class="p-1.5 text-green-600 hover:bg-green-50 rounded transition"
+                            title="Add Subcategory">
+                            <i class="fas fa-plus text-xs"></i>
+                        </button>
+                        {% endif %}
+                        <button 
+                            @click="showModal = true; modalTitle = 'Edit Category'"
+                            hx-get="{% url 'category:edit' category.pk %}"
+                            hx-target="#modal-content"
                             class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
                             title="Edit">
                             <i class="fas fa-edit text-xs"></i>
                         </button>
                         <button 
-                            @click="showDeleteConfirm = true; deleteUrl = '{% url "category:delete" category.pk %}'; deleteItem = '{{ category.name }}'"
+                            @click="showDeleteConfirm = true; deleteUrl = '{% url 'category:delete' category.pk %}'; deleteItem = '{{ category.name }}'"
                             class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                             title="Delete">
                             <i class="fas fa-trash text-xs"></i>
@@ -82,9 +135,103 @@
                     </div>
                 </td>
             </tr>
-            {% empty %}
+
+            <!-- Child Categories (Level 2) with Tree Indentation -->
+            {% if not search and category.children.all %}
+                {% for child in category.children.all %}
+                <tr x-show="expanded" 
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 transform -translate-y-2"
+                    x-transition:enter-end="opacity-100 transform translate-y-0"
+                    class="bg-gradient-to-r from-blue-50 to-white border-b border-blue-100 hover:from-blue-100 hover:to-blue-50 transition-all"
+                    style="display: none;">
+                    
+                    <!-- Category Tree Column with Indentation (Level 2) -->
+                    <td class="px-3 py-2">
+                        <div class="flex items-center pl-10">
+                            <!-- Tree Connector Line -->
+                            <div class="w-6 h-full flex items-center relative">
+                                <div class="border-l-2 border-b-2 border-blue-300 w-4 h-4 rounded-bl-lg"></div>
+                            </div>
+                            
+                            <!-- Icon (Level 2) -->
+                            <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 shadow-sm ml-2">
+                                {% if child.icon %}
+                                <i class="fas {{ child.icon }} text-blue-600 text-xs"></i>
+                                {% else %}
+                                <i class="fas fa-folder-open text-blue-600 text-xs"></i>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Name with L2 Badge -->
+                            <div class="ml-3 flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-medium text-gray-900">{{ child.name }}</span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold bg-blue-500 text-white">
+                                        L2
+                                    </span>
+                                </div>
+                                <div class="text-xs text-blue-600 mt-0.5">
+                                    <i class="fas fa-arrow-turn-up fa-rotate-90 mr-1"></i>{{ category.name }}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    
+                    <!-- Products Count -->
+                    <td class="px-3 py-2 text-center">
+                        <span class="inline-flex items-center justify-center w-9 h-9 rounded-full text-xs font-bold {% if child.product_count > 0 %}bg-green-100 text-green-800{% else %}bg-gray-100 text-gray-400{% endif %}">
+                            {{ child.product_count|default:0 }}
+                        </span>
+                    </td>
+                    
+                    <!-- Sort Order -->
+                    <td class="px-3 py-2 text-center">
+                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-blue-50 text-blue-700">
+                            {{ child.sort_order }}
+                        </span>
+                    </td>
+                    
+                    <!-- Status -->
+                    <td class="px-3 py-2 text-center whitespace-nowrap">
+                        {% if child.is_active %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            <i class="fas fa-check-circle mr-1"></i>Active
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                            <i class="fas fa-times-circle mr-1"></i>Inactive
+                        </span>
+                        {% endif %}
+                    </td>
+                    
+                    <!-- Actions -->
+                    <td class="px-3 py-2 text-center whitespace-nowrap" @click.stop>
+                        <div class="flex items-center justify-center gap-1">
+                            <button 
+                                @click="showModal = true; modalTitle = 'Edit Subcategory'"
+                                hx-get="{% url 'category:edit' child.pk %}"
+                                hx-target="#modal-content"
+                                class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                                title="Edit">
+                                <i class="fas fa-edit text-xs"></i>
+                            </button>
+                            <button 
+                                @click="showDeleteConfirm = true; deleteUrl = '{% url 'category:delete' child.pk %}'; deleteItem = '{{ child.name }}'"
+                                class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                                title="Delete">
+                                <i class="fas fa-trash text-xs"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% endif %}
+        </tbody>
+        {% empty %}
+        <tbody>
             <tr>
-                <td colspan="8" class="px-3 py-8 text-center">
+                <td colspan="5" class="px-3 py-8 text-center">
                     <div class="flex flex-col items-center justify-center text-gray-400">
                         <i class="fas fa-folder-open text-4xl mb-3"></i>
                         <p class="text-sm font-medium text-gray-500">No categories found</p>
@@ -92,8 +239,8 @@
                     </div>
                 </td>
             </tr>
-            {% endfor %}
         </tbody>
+        {% endfor %}
     </table>
 </div>
 

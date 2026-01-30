@@ -8,7 +8,7 @@ import uuid
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
-from core.models import Company, Brand, User
+from core.models import Company, Brand, Store, User
 from products.models import Category, Product
 from members.models import Member
 
@@ -40,6 +40,14 @@ class Promotion(models.Model):
         ('bill', 'Bill/Subtotal Level'),
         ('payment', 'Payment Method'),
     ]
+
+    CROSS_BRAND_TYPES = [
+        ('trigger_benefit', 'Buy from Brand A → Discount at Brand B'),
+        ('multi_brand_spend', 'Spend at Multiple Brands → Get Reward'),
+        ('cross_brand_bundle', 'Cross-Brand Product Bundle'),
+        ('loyalty_accumulate', 'Accumulate Points Across Brands'),
+        ('same_receipt', 'Multiple Brands in Same Transaction'),
+    ]
     
     SCOPE_CHOICES = [
         ('company', 'Company-wide'),
@@ -56,11 +64,9 @@ class Promotion(models.Model):
     ]
     
     EXECUTION_STAGE_CHOICES = [
-        ('item_level', 'Item Level'),
-        ('subtotal', 'Subtotal Level'),
-        ('after_tax', 'After Tax'),
-        ('payment', 'Payment Level'),
-        ('post_payment', 'Post Payment (Cashback)'),
+        ('item_level', 'Item Level - Auto-calculate saat add product'),
+        ('cart_level', 'Cart Level - Calculate saat klik button'),
+        ('payment_level', 'Payment Level - Calculate saat payment'),
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -88,6 +94,18 @@ class Promotion(models.Model):
     )
     brands = models.ManyToManyField(Brand, related_name='multi_brand_promotions', blank=True)
     exclude_brands = models.ManyToManyField(Brand, related_name='excluded_promotions', blank=True)
+    
+    # Store Selection
+    all_stores = models.BooleanField(
+        default=True,
+        help_text="Apply to all stores in scope (company/brand)"
+    )
+    stores = models.ManyToManyField(
+        Store,
+        related_name='promotions',
+        blank=True,
+        help_text="Specific stores (if all_stores=False)"
+    )
     
     # Discount Configuration
     discount_percent = models.DecimalField(
@@ -136,6 +154,43 @@ class Promotion(models.Model):
     products = models.ManyToManyField(Product, related_name='direct_promotions', blank=True)
     exclude_categories = models.ManyToManyField(Category, related_name='excluded_promotions', blank=True)
     exclude_products = models.ManyToManyField(Product, related_name='excluded_from_promotions', blank=True)
+    
+    # Cross-Brand Promotion (NEW!)
+    is_cross_brand = models.BooleanField(
+        default=False,
+        help_text="Enable cross-brand promotion rules"
+    )
+    cross_brand_type = models.CharField(
+        max_length=50,
+        choices=CROSS_BRAND_TYPES,
+        null=True,
+        blank=True,
+        help_text="Type of cross-brand promotion"
+    )
+    trigger_brands = models.ManyToManyField(
+        'core.Brand',
+        related_name='trigger_promotions',
+        blank=True,
+        help_text="Brands where purchase triggers the promotion"
+    )
+    trigger_min_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Minimum purchase amount in trigger brands"
+    )
+    benefit_brands = models.ManyToManyField(
+        'core.Brand',
+        related_name='benefit_promotions',
+        blank=True,
+        help_text="Brands where customer gets the benefit"
+    )
+    cross_brand_rules = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="Complex cross-brand rules in JSON format"
+    )
     
     # Member Tier
     member_only = models.BooleanField(default=False)

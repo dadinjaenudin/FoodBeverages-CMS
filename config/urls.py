@@ -4,6 +4,8 @@ URL configuration for F&B POS HO System
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
+from django.conf import settings
+from django.conf.urls.static import static
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -24,6 +26,9 @@ urlpatterns = [
     # Authentication
     path('auth/', include('core.urls_auth')),
     
+    # Global Filters
+    path('global/', include('core.urls_global')),
+    
     # Dashboard
     path('dashboard/', include('dashboard.urls')),
     
@@ -36,6 +41,9 @@ urlpatterns = [
     # Store Management
     path('store/', include('core.urls_store')),
     
+    # User Management
+    path('users/', include('core.urls_user')),
+    
     # Product Management
     path('products/', include('products.urls_product')),
     path('products/categories/', include('products.urls_category')),
@@ -47,33 +55,40 @@ urlpatterns = [
     path('members/', include('members.urls')),
     path('promotions/', include('promotions.urls')),
     
+    # Sync API for Edge Server (versioned)
+    path('api/v1/sync/', include(('sync_api.sync_urls', 'sync_api'), namespace='sync_api_v1')),
+    
+    # Settings
+    path('settings/', include('settings.urls')),
+    
     # Inventory Management
     path('inventory/items/', include('inventory.urls_inventoryitem')),
     path('inventory/recipes/', include('inventory.urls_recipe')),
     path('inventory/movements/', include('inventory.urls_stockmovement')),
     
+    # POS & Queue Display
+    path('pos/', include('transactions.urls')),
+    
     # Reports & Analytics
     path('reports/', include('analytics.urls')),
     
     # JWT Authentication
-    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Versioned endpoints (v1)
+    path('api/v1/token/', TokenObtainPairView.as_view(), name='token_obtain_pair_v1'),
+    path('api/v1/token/refresh/', TokenRefreshView.as_view(), name='token_refresh_v1'),
     
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
-    
-    # API Endpoints - HO → Edge (Master Data Pull)
-    path('api/v1/core/', include('core.api.urls')),
-    path('api/v1/products/', include('products.api.urls')),
-    path('api/v1/members/', include('members.api.urls')),
-    path('api/v1/promotions/', include('promotions.api.urls')),
-    path('api/v1/inventory/', include('inventory.api.urls')),
-    
+        
     # API Endpoints - Edge → HO (Transaction Push)
     path('api/v1/transactions/', include('transactions.api.urls')),
     
     # API Endpoints - Analytics & Reporting
     path('api/v1/analytics/', include('analytics.api_urls')),
 ]
+
+# Serve media files in development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

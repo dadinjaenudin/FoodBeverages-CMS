@@ -1,0 +1,142 @@
+<div class="overflow-x-auto">
+<table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-50">
+        <tr>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">User</th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Role / Scope</th>
+            <th scope="col" class="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Organization</th>
+            <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+            <th scope="col" class="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+        </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+        {% for user in users %}
+        <tr class="hover:bg-gray-50 transition">
+            <td class="px-3 py-2 whitespace-nowrap">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 flex-shrink-0">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white text-xs font-medium">
+                            {{ user.username.0|upper }}
+                        </span>
+                    </div>
+                    <div class="ml-3">
+                        <div class="text-xs font-semibold text-gray-900">{{ user.get_full_name|default:user.username }}</div>
+                        <div class="text-xs text-gray-500">{{ user.email|default:"No email" }}</div>
+                    </div>
+                </div>
+            </td>
+            <td class="px-3 py-2">
+                <div class="text-xs text-gray-900">{{ user.get_role_display }}</div>
+                <div class="text-xs text-gray-500">{{ user.get_role_scope_display }}</div>
+            </td>
+            <td class="px-3 py-2">
+                {% if user.company %}
+                    <div class="text-xs text-gray-900">{{ user.company.name }}</div>
+                    {% if user.brand %}
+                        <div class="text-xs text-gray-500">{{ user.brand.name }}</div>
+                    {% endif %}
+                    {% if user.store %}
+                        <div class="text-xs text-gray-500">{{ user.store.store_name }}</div>
+                    {% endif %}
+                {% else %}
+                    <span class="text-xs text-gray-400 italic">All Companies</span>
+                {% endif %}
+            </td>
+            <td class="px-3 py-2 text-center whitespace-nowrap">
+                {% if user.is_active %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                    <i class="fas fa-check-circle text-xs mr-1"></i> Active
+                </span>
+                {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                    <i class="fas fa-times-circle text-xs mr-1"></i> Inactive
+                </span>
+                {% endif %}
+            </td>
+            <td class="px-3 py-2 text-center whitespace-nowrap">
+                <div class="flex items-center justify-center gap-1">
+                    <button 
+                        @click="showModal = true; modalTitle = 'Edit User'"
+                        hx-get="{% url 'user:edit' user.id %}"
+                        hx-target="#modal-content"
+                        class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                        title="Edit">
+                        <i class="fas fa-edit text-xs"></i>
+                    </button>
+                    {% if user.id != request.user.id %}
+                    <button 
+                        @click="showDeleteConfirm = true; deleteItem = '{{ user.username }}'; deleteUrl = '{% url "user:delete" user.id %}'"
+                        class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
+                        title="Delete">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="px-3 py-8 text-center">
+                <div class="flex flex-col items-center justify-center text-gray-400">
+                    <i class="fas fa-users text-4xl mb-3"></i>
+                    <p class="text-sm font-medium text-gray-500">No users found</p>
+                    {% if search %}
+                    <p class="text-xs text-gray-400 mt-1">Try adjusting your search criteria</p>
+                    {% else %}
+                    <p class="text-xs text-gray-400 mt-1">Click "Add User" to create your first user</p>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- Pagination (Match Products) -->
+{% if users.has_other_pages %}
+<div class="bg-gray-50 px-3 py-2 border-t border-gray-200 sm:px-4">
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div class="text-xs text-gray-600">
+            Showing <span class="font-medium text-gray-900">{{ users.start_index }}</span> to <span class="font-medium text-gray-900">{{ users.end_index }}</span> of <span class="font-medium text-gray-900">{{ total_count }}</span> users
+        </div>
+        <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+            {% if users.has_previous %}
+            <button 
+                hx-get="{% url 'user:list' %}?page={{ users.previous_page_number }}&search={{ search }}"
+                hx-target="#user-table"
+                class="relative inline-flex items-center px-2 py-1 rounded-l-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50"
+            >
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            {% endif %}
+            
+            {% for i in users.paginator.page_range %}
+                {% if users.number == i %}
+                <span class="relative inline-flex items-center px-3 py-1 border border-blue-500 bg-blue-50 text-xs font-semibold text-blue-600 z-10">
+                    {{ i }}
+                </span>
+                {% else %}
+                <button 
+                    hx-get="{% url 'user:list' %}?page={{ i }}&search={{ search }}"
+                    hx-target="#user-table"
+                    class="relative inline-flex items-center px-3 py-1 border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
+                >
+                    {{ i }}
+                </button>
+                {% endif %}
+            {% endfor %}
+
+            {% if users.has_next %}
+            <button 
+                hx-get="{% url 'user:list' %}?page={{ users.next_page_number }}&search={{ search }}"
+                hx-target="#user-table"
+                class="relative inline-flex items-center px-2 py-1 rounded-r-md border border-gray-300 bg-white text-xs font-medium text-gray-500 hover:bg-gray-50"
+            >
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            {% endif %}
+        </nav>
+    </div>
+</div>
+{% endif %}

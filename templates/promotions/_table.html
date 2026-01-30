@@ -1,0 +1,177 @@
+<!-- Promotions Table -->
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Code</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Name</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Discount</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Period</th>
+                <th class="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Stores</th>
+                <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
+                <th class="px-4 py-2 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+            {% for promotion in promotions %}
+            <tr class="hover:bg-gray-50">
+                <!-- Code -->
+                <td class="px-4 py-3 text-sm">
+                    <div class="font-mono font-semibold text-gray-900">{{ promotion.code }}</div>
+                </td>
+                
+                <!-- Name -->
+                <td class="px-4 py-3 text-sm">
+                    <div class="font-semibold text-gray-900">{{ promotion.name }}</div>
+                    {% if promotion.description %}
+                        <div class="text-xs text-gray-500 truncate" style="max-width: 200px;">{{ promotion.description }}</div>
+                    {% endif %}
+                    <div class="text-xs text-gray-500 mt-1">
+                        <span class="font-medium">{{ promotion.company.name }}</span>
+                        {% if promotion.brand %}
+                            <span class="text-gray-400">•</span> {{ promotion.brand.name }}
+                        {% endif %}
+                    </div>
+                </td>
+                
+                <!-- Type -->
+                <td class="px-4 py-3 text-sm">
+                    {% if promotion.promo_type == 'percent_discount' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Percent Discount</span>
+                    {% elif promotion.promo_type == 'amount_discount' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Amount Discount</span>
+                    {% elif promotion.promo_type == 'buy_x_get_y' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">BOGO</span>
+                    {% elif promotion.promo_type == 'happy_hour' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Happy Hour</span>
+                    {% elif promotion.promo_type == 'package' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-pink-100 text-pink-800">Package</span>
+                    {% elif promotion.promo_type == 'threshold_tier' %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">Tiered</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">{{ promotion.get_promo_type_display }}</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Discount -->
+                <td class="px-4 py-3 text-sm">
+                    {% if promotion.promo_type == 'percent_discount' %}
+                        <span class="font-semibold text-green-600">{{ promotion.discount_percent }}%</span>
+                    {% elif promotion.promo_type == 'amount_discount' %}
+                        <span class="font-semibold text-green-600">Rp {{ promotion.discount_amount|floatformat:0 }}</span>
+                    {% elif promotion.promo_type == 'buy_x_get_y' %}
+                        <span class="text-xs text-gray-600">Buy {{ promotion.buy_quantity }} Get {{ promotion.get_quantity }}</span>
+                    {% else %}
+                        <span class="text-xs text-gray-500">See details</span>
+                    {% endif %}
+                    {% if promotion.min_purchase > 0 %}
+                        <div class="text-xs text-gray-500">Min: Rp {{ promotion.min_purchase|floatformat:0 }}</div>
+                    {% endif %}
+                </td>
+                
+                <!-- Period -->
+                <td class="px-4 py-3 text-sm text-gray-600">
+                    {% if promotion.start_date %}
+                        <div class="text-xs">{{ promotion.start_date|date:"d/m/Y" }}</div>
+                    {% endif %}
+                    {% if promotion.end_date %}
+                        <div class="text-xs">to {{ promotion.end_date|date:"d/m/Y" }}</div>
+                    {% else %}
+                        <div class="text-xs text-gray-400">No end date</div>
+                    {% endif %}
+                    {% if promotion.valid_time_start or promotion.valid_time_end %}
+                        <div class="text-xs text-gray-500 mt-1">
+                            {{ promotion.valid_time_start|default:"--:--" }} - {{ promotion.valid_time_end|default:"--:--" }}
+                        </div>
+                    {% endif %}
+                </td>
+                
+                <!-- Stores -->
+                <td class="px-4 py-3 text-sm">
+                    {% if promotion.all_stores %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">All Stores</span>
+                    {% else %}
+                        <span class="text-xs text-gray-600">{{ promotion.stores.count }} store(s)</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Status -->
+                <td class="px-4 py-3 text-center">
+                    {% if promotion.is_active %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>
+                    {% else %}
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Inactive</span>
+                    {% endif %}
+                </td>
+                
+                <!-- Actions -->
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <a href="{% url 'promotion:edit' promotion.pk %}" 
+                           class="text-blue-600 hover:text-blue-800"
+                           title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </a>
+                        <button
+                            @click="deleteUrl = '{% url 'promotion:delete' promotion.pk %}'; deleteItem = '{{ promotion.name }}'; showDeleteConfirm = true"
+                            class="text-red-600 hover:text-red-800"
+                            title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <div class="flex flex-col items-center">
+                        <svg class="w-12 h-12 mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                        </svg>
+                        <p class="text-sm">No promotions found</p>
+                        <p class="text-xs text-gray-400">Click "Create Promotion" to add your first promotion</p>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if promotions.has_other_pages %}
+<div class="flex items-center justify-between px-4 py-3 bg-white border-t border-gray-200">
+    <div class="text-sm text-gray-700">
+        Showing page {{ promotions.number }} of {{ promotions.paginator.num_pages }} ({{ promotions.paginator.count }} total promotions)
+    </div>
+    <div class="flex gap-1">
+        {% if promotions.has_previous %}
+            <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if company_id %}&company_id={{ company_id }}{% endif %}{% if promo_type %}&promo_type={{ promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">First</a>
+            <a href="?page={{ promotions.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if company_id %}&company_id={{ company_id }}{% endif %}{% if promo_type %}&promo_type={{ promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Previous</a>
+        {% endif %}
+        
+        {% for num in promotions.paginator.page_range %}
+            {% if promotions.number == num %}
+                <span class="px-3 py-1 text-sm text-white bg-blue-600 border border-blue-600 rounded">{{ num }}</span>
+            {% elif num > promotions.number|add:'-3' and num < promotions.number|add:'3' %}
+                <a href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if company_id %}&company_id={{ company_id }}{% endif %}{% if promo_type %}&promo_type={{ promo_type }}{% endif %}"
+                   class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if promotions.has_next %}
+            <a href="?page={{ promotions.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if company_id %}&company_id={{ company_id }}{% endif %}{% if promo_type %}&promo_type={{ promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Next</a>
+            <a href="?page={{ promotions.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if company_id %}&company_id={{ company_id }}{% endif %}{% if promo_type %}&promo_type={{ promo_type }}{% endif %}"
+               class="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50">Last</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

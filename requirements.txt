@@ -6,6 +6,7 @@ psycopg2-binary==2.9.9
 # Django REST Framework
 djangorestframework==3.14.0
 django-filter==23.5
+markdown==3.4.4
 
 # Authentication & Security
 djangorestframework-simplejwt==5.3.1
@@ -15,9 +16,13 @@ django-cors-headers==4.3.1
 celery==5.3.4
 redis==5.0.1
 django-redis==5.4.0
+django-celery-beat==2.7.0
 
 # Image handling
 Pillow==10.2.0
+
+# Excel handling
+openpyxl==3.1.2
 
 # Admin enhancements
 django-import-export==3.3.5
@@ -29,6 +34,7 @@ ipython==8.20.0
 # Testing
 pytest==7.4.4
 pytest-django==4.7.0
+pytest-cov==4.1.0
 factory-boy==3.3.0
 
 # Code quality
@@ -40,8 +46,14 @@ isort==5.13.2
 gunicorn==21.2.0
 whitenoise==6.6.0
 
+# API Documentation
+drf-spectacular==0.27.0
+
+# HTMX Integration
+django-htmx==1.17.0
+
 # Utilities
 python-dateutil==2.8.2
 pytz==2023.3
-drf-spectacular==0.29.0
-django-htmx==1.27.0
+requests==2.31.0
+flower==2.0.1

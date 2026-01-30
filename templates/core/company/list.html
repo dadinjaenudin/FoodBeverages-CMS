@@ -114,15 +114,33 @@
                 </div>
 
                 <!-- Modal Body - Compact -->
-                <div id="modal-content" 
-                     hx-get="" 
-                     x-bind:hx-get="modalUrl"
-                     hx-trigger="load"
-                     hx-swap="innerHTML"
-                     class="p-4">
-                    <!-- Form will be loaded here via HTMX -->
-                    <div class="flex justify-center items-center py-8">
-                        <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                <div id="modal-content" class="p-4">
+                    <!-- Form will be loaded here via Alpine.js fetch -->
+                    <div x-show="showModal" x-init="
+                        $watch('showModal', value => {
+                            if (value) {
+                                // Clear previous content
+                                $el.innerHTML = '<div class=\'flex justify-center items-center py-8\'><i class=\'fas fa-spinner fa-spin text-2xl text-blue-600\'></i></div>';
+                                
+                                // Fetch form content
+                                fetch(modalUrl)
+                                    .then(response => response.text())
+                                    .then(html => {
+                                        $el.innerHTML = html;
+                                        // Re-initialize HTMX for the new content
+                                        if (typeof htmx !== 'undefined') {
+                                            htmx.process($el);
+                                        }
+                                    })
+                                    .catch(error => {
+                                        $el.innerHTML = '<div class=\'text-red-600 text-sm p-4\'>Error loading form</div>';
+                                    });
+                            }
+                        })
+                    ">
+                        <div class="flex justify-center items-center py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -181,10 +199,13 @@
                         Cancel
                     </button>
                     <button @click="
+                        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                        document.querySelector('meta[name=csrf-token]')?.content ||
+                                        getCookie('csrftoken');
                         fetch(deleteUrl, { 
                             method: 'POST',
                             headers: { 
-                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-CSRFToken': csrfToken,
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
                         })
@@ -193,8 +214,12 @@
                             if (data.success) {
                                 window.location.reload();
                             } else {
-                                alert(data.message);
+                                alert(data.message || 'Error deleting company');
                             }
+                        })
+                        .catch(err => {
+                            console.error('Delete error:', err);
+                            alert('Error deleting company');
                         });
                         showDeleteConfirm = false;
                     "
@@ -214,6 +239,22 @@
 
 {% block extra_js %}
 <script>
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
     // Handle form submission via HTMX
     document.body.addEventListener('htmx:afterRequest', function(evt) {
         if (evt.detail.successful) {

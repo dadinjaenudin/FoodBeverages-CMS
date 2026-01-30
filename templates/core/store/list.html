@@ -24,7 +24,7 @@
 <div x-data="{ 
     showModal: false, 
     modalTitle: 'Add Store',
-    modalUrl: '{% url "store:create" %}',
+    modalUrl: '{% url 'store:create' %}',
     deleteUrl: '',
     deleteItem: '',
     showDeleteConfirm: false
@@ -36,16 +36,16 @@
             <p class="text-xs text-gray-600 mt-0.5">Manage your stores ({{ total_count }} total)</p>
         </div>
         <button 
-            @click="showModal = true; modalTitle = 'Add Store'; modalUrl = '{% url "store:create" %}'"
-            class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition">
+            @click="showModal = true; modalTitle = 'Add Store'; modalUrl = '{% url 'store:create' %}'"
+            class="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition">
             <i class="fas fa-plus mr-1.5"></i>
             Add Store
         </button>
     </div>
 
-    <!-- Filters - Compact -->
+    <!-- Filters - Compact (Company/Brand removed - use Global Filter in header) -->
     <div class="bg-white rounded-lg shadow-sm p-3 mb-3">
-        <form method="get" class="flex gap-2" hx-get="{% url 'store:list' %}" hx-target="#store-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input, change from:#company-filter, change from:#brand-filter">
+        <form method="get" class="flex gap-2" hx-get="{% url 'store:list' %}" hx-target="#store-table" hx-trigger="submit, keyup changed delay:500ms from:#search-input">
             <div class="flex-1 relative">
                 <input 
                     type="text" 
@@ -57,34 +57,10 @@
                 <i class="fas fa-search absolute left-3 top-2.5 text-gray-400 text-xs"></i>
             </div>
             
-            <select 
-                name="company" 
-                id="company-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Companies</option>
-                {% for company in companies %}
-                <option value="{{ company.id }}" {% if company.id|stringformat:"s" == selected_company %}selected{% endif %}>
-                    {{ company.name }}
-                </option>
-                {% endfor %}
-            </select>
-            
-            <select 
-                name="brand" 
-                id="brand-filter"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="">All Brands</option>
-                {% for brand in brands %}
-                <option value="{{ brand.id }}" {% if brand.id|stringformat:"s" == selected_brand %}selected{% endif %}>
-                    {{ brand.name }}
-                </option>
-                {% endfor %}
-            </select>
-            
             <button type="submit" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-search mr-1"></i> Search
             </button>
-            {% if search or selected_company or selected_brand %}
+            {% if search %}
             <a href="{% url 'store:list' %}" class="px-4 py-1.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition">
                 <i class="fas fa-times mr-1"></i> Clear
             </a>
@@ -135,11 +111,17 @@
                 </div>
 
                 <div id="modal-content" 
-                     hx-get="" 
-                     x-bind:hx-get="modalUrl"
-                     hx-trigger="load"
-                     hx-swap="innerHTML"
-                     class="p-4">
+                     class="p-4"
+                     x-init="$watch('showModal', value => {
+                         if (value) {
+                             fetch(modalUrl)
+                                 .then(res => res.text())
+                                 .then(html => {
+                                     $el.innerHTML = html;
+                                     htmx.process($el);
+                                 });
+                         }
+                     })">
                     <div class="flex justify-center items-center py-8">
                         <i class="fas fa-spinner fa-spin text-2xl text-blue-600"></i>
                     </div>
@@ -198,10 +180,13 @@
                         Cancel
                     </button>
                     <button @click="
+                        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                        document.querySelector('meta[name=csrf-token]')?.content ||
+                                        getCookie('csrftoken');
                         fetch(deleteUrl, { 
                             method: 'POST',
                             headers: { 
-                                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                                'X-CSRFToken': csrfToken,
                                 'X-Requested-With': 'XMLHttpRequest'
                             }
                         })
@@ -210,8 +195,12 @@
                             if (data.success) {
                                 window.location.reload();
                             } else {
-                                alert(data.message);
+                                alert(data.message || 'Error deleting store');
                             }
+                        })
+                        .catch(err => {
+                            console.error('Delete error:', err);
+                            alert('Error deleting store');
                         });
                         showDeleteConfirm = false;
                     "
@@ -231,6 +220,22 @@
 
 {% block extra_js %}
 <script>
+    // Get CSRF token from cookie
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
     document.body.addEventListener('htmx:afterRequest', function(evt) {
         if (evt.detail.successful) {
             try {

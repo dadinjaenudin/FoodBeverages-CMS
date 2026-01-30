@@ -1,0 +1,43 @@
+<!-- Happy Hour Time Configuration -->
+<div x-show="promoType === 'happy_hour'" x-transition>
+    <div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+            <i class="fas fa-clock text-blue-600 mr-2"></i>Happy Hour Time
+        </h3>
+        
+        <div class="grid grid-cols-2 gap-3">
+            <!-- Valid Time Start -->
+            <div>
+                <label for="id_valid_time_start" class="block text-xs font-medium text-gray-700 mb-1">
+                    Start Time <span class="text-red-500">*</span>
+                </label>
+                <input type="time" 
+                       name="valid_time_start" 
+                       id="id_valid_time_start" 
+                       value="{{ promotion.valid_time_start|time:'H:i'|default:'' }}" 
+                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">e.g., 14:00</p>
+            </div>
+
+            <!-- Valid Time End -->
+            <div>
+                <label for="id_valid_time_end" class="block text-xs font-medium text-gray-700 mb-1">
+                    End Time <span class="text-red-500">*</span>
+                </label>
+                <input type="time" 
+                       name="valid_time_end" 
+                       id="id_valid_time_end" 
+                       value="{{ promotion.valid_time_end|time:'H:i'|default:'' }}" 
+                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">e.g., 16:00</p>
+            </div>
+        </div>
+        
+        <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-xs text-yellow-800">
+                <i class="fas fa-info-circle mr-1"></i>
+                Happy Hour berlaku setiap hari pada jam yang ditentukan
+            </p>
+        </div>
+    </div>
+</div>

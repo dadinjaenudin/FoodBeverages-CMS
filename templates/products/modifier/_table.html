@@ -68,13 +68,13 @@
                 <td class="px-3 py-2 text-center whitespace-nowrap">
                     <div class="flex items-center justify-center gap-1">
                         <button 
-                            @click="showModal = true; modalTitle = 'Edit Modifier'; modalUrl = '{% url "modifier:edit" modifier.pk %}'"
+                            @click="showModal = true; modalTitle = 'Edit Modifier'; modalUrl = '{% url 'modifier:edit' modifier.pk %}'"
                             class="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
                             title="Edit">
                             <i class="fas fa-edit text-xs"></i>
                         </button>
                         <button 
-                            @click="showDeleteConfirm = true; deleteUrl = '{% url "modifier:delete" modifier.pk %}'; deleteItem = '{{ modifier.name }}'"
+                            @click="showDeleteConfirm = true; deleteUrl = '{% url 'modifier:delete' modifier.pk %}'; deleteItem = '{{ modifier.name }}'"
                             class="p-1.5 text-red-600 hover:bg-red-50 rounded transition"
                             title="Delete">
                             <i class="fas fa-trash text-xs"></i>

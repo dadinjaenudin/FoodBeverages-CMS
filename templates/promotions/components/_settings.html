@@ -1,0 +1,79 @@
+<!-- Settings -->
+<div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+    <h3 class="text-sm font-semibold text-gray-900 mb-3">
+        <i class="fas fa-cog text-blue-600 mr-2"></i>Settings & Execution
+    </h3>
+    
+    <!-- Execution Settings (NEW) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 pb-3 border-b border-gray-200">
+        <!-- Execution Stage -->
+        <div>
+            <label for="id_execution_stage" class="block text-xs font-medium text-gray-700 mb-1">
+                Execution Stage <span class="text-red-500">*</span>
+                <i class="fas fa-info-circle text-gray-400 ml-1" title="When to apply promotion"></i>
+            </label>
+            <select name="execution_stage" id="id_execution_stage" required
+                    class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="item_level" {% if not promotion or promotion.execution_stage == 'item_level' %}selected{% endif %}>
+                    Item Level (Auto-calculate saat add product)
+                </option>
+                <option value="cart_level" {% if promotion and promotion.execution_stage == 'cart_level' %}selected{% endif %}>
+                    Cart Level (Calculate saat klik button)
+                </option>
+                <option value="payment_level" {% if promotion and promotion.execution_stage == 'payment_level' %}selected{% endif %}>
+                    Payment Level (Calculate saat payment)
+                </option>
+            </select>
+            <p class="text-xs text-gray-500 mt-1">
+                <i class="fas fa-lightbulb text-yellow-500"></i>
+                Item Level: Real-time saat add item | Cart Level: Manual button | Payment Level: Saat bayar
+            </p>
+        </div>
+
+        <!-- Execution Priority -->
+        <div>
+            <label for="id_execution_priority" class="block text-xs font-medium text-gray-700 mb-1">
+                Execution Priority
+                <i class="fas fa-info-circle text-gray-400 ml-1" title="Lower number = Higher priority (1-999)"></i>
+            </label>
+            <input type="number" name="execution_priority" id="id_execution_priority" 
+                   value="{% if promotion and promotion.execution_priority %}{{ promotion.execution_priority }}{% else %}500{% endif %}"
+                   min="1" max="999"
+                   class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+            <p class="text-xs text-gray-500 mt-1">
+                <i class="fas fa-sort-numeric-down text-blue-500"></i>
+                Lower number = Higher priority (1-999). Default: 500
+            </p>
+        </div>
+    </div>
+    
+    <!-- Flags -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <!-- Is Active -->
+        <label class="flex items-center cursor-pointer">
+            <input type="checkbox" name="is_active" id="id_is_active" {% if not promotion or promotion.is_active %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+            <span class="ml-2 text-xs text-gray-700">Active</span>
+        </label>
+
+        <!-- Auto Apply -->
+        <label class="flex items-center cursor-pointer">
+            <input type="checkbox" name="is_auto_apply" id="id_is_auto_apply" {% if not promotion or promotion.is_auto_apply %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+            <span class="ml-2 text-xs text-gray-700">
+                Auto-apply
+                <i class="fas fa-info-circle text-gray-400 ml-1" title="Apply automatically without user input"></i>
+            </span>
+        </label>
+
+        <!-- Member Only -->
+        <label class="flex items-center cursor-pointer">
+            <input type="checkbox" name="member_only" id="id_member_only" {% if promotion and promotion.member_only %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+            <span class="ml-2 text-xs text-gray-700">Member Only</span>
+        </label>
+
+        <!-- Is Stackable -->
+        <label class="flex items-center cursor-pointer">
+            <input type="checkbox" name="is_stackable" id="id_is_stackable" {% if promotion and promotion.is_stackable %}checked{% endif %} class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500">
+            <span class="ml-2 text-xs text-gray-700">Stackable</span>
+        </label>
+    </div>
+</div>

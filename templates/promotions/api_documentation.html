@@ -1,0 +1,624 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="space-y-6 max-w-6xl mx-auto">
+    
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Edge Server Sync API Documentation</h1>
+            <p class="text-gray-600 mt-1">Complete API reference for Edge Server integration</p>
+        </div>
+        <a href="{% url 'promotion:compiler_dashboard' %}"
+           class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors">
+            Back to Dashboard
+        </a>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <h3 class="font-semibold text-blue-900 mb-3">Quick Navigation</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <a href="#overview" class="text-blue-600 hover:text-blue-800">Overview</a>
+            <a href="#authentication" class="text-blue-600 hover:text-blue-800">Authentication</a>
+            <a href="#promotions-api" class="text-blue-600 hover:text-blue-800">Promotion APIs</a>
+            <a href="#master-data-api" class="text-blue-600 hover:text-blue-800">Master Data APIs</a>
+            <a href="#core-api" class="text-blue-600 hover:text-blue-800">Core APIs</a>
+            <a href="#product-api" class="text-blue-600 hover:text-blue-800">Product APIs</a>
+            <a href="#examples" class="text-blue-600 hover:text-blue-800">Examples</a>
+            <a href="#testing" class="text-blue-600 hover:text-blue-800">Testing</a>
+        </div>
+    </div>
+
+    <!-- API Overview -->
+    <div id="overview" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">API Overview</h2>
+        <p class="text-gray-600 mb-4">Edge Server dapat mengakses 2 set API:</p>
+        
+        <div class="grid md:grid-cols-2 gap-4">
+            <!-- Promotion Sync API -->
+            <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <h3 class="font-semibold text-purple-900 mb-2">🎁 Promotion Sync API</h3>
+                <div class="bg-gray-900 text-green-400 rounded p-2 font-mono text-xs mb-2">
+                    {{ request.scheme }}://{{ request.get_host }}/api/v1/sync/
+                </div>
+                <p class="text-sm text-gray-600 mb-2">Specialized API untuk promotions dengan compilation engine</p>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>✅ Pre-compiled JSON</li>
+                    <li>✅ Sync strategy support</li>
+                    <li>✅ Optimized untuk POS engine</li>
+                    <li>✅ Version checking</li>
+                </ul>
+            </div>
+            
+            <!-- Master Data REST API -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 class="font-semibold text-blue-900 mb-2">🏢 Master Data REST API</h3>
+                <div class="bg-gray-900 text-green-400 rounded p-2 font-mono text-xs mb-2">
+                    {{ request.scheme }}://{{ request.get_host }}/api/v1/
+                </div>
+                <p class="text-sm text-gray-600 mb-2">Standard REST API untuk semua master data</p>
+                <ul class="text-sm text-gray-600 space-y-1">
+                    <li>✅ Core: Companies, Brands, Stores, Users</li>
+                    <li>✅ Products: Categories, Products, Modifiers</li>
+                    <li>✅ Members & Transactions</li>
+                    <li>✅ Incremental sync support</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p class="text-sm text-gray-700">
+                <strong>💡 Best Practice:</strong> Use <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">/api/v1/sync/promotions/</code> untuk promotions (optimized), 
+                dan <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">/api/v1/products/...</code> untuk master data lainnya.
+            </p>
+        </div>
+    </div>
+
+    <!-- Total APIs Available -->
+    <div class="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg p-6 border border-purple-200">
+        <h3 class="text-lg font-semibold text-gray-900 mb-3">📊 Total APIs Available for Edge Server</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            <div class="bg-white rounded-lg p-3">
+                <div class="text-2xl font-bold text-purple-600">8</div>
+                <div class="text-xs text-gray-600">Sync APIs</div>
+            </div>
+            <div class="bg-white rounded-lg p-3">
+                <div class="text-2xl font-bold text-blue-600">8</div>
+                <div class="text-xs text-gray-600">Core APIs</div>
+            </div>
+            <div class="bg-white rounded-lg p-3">
+                <div class="text-2xl font-bold text-green-600">14</div>
+                <div class="text-xs text-gray-600">Product APIs</div>
+            </div>
+            <div class="bg-white rounded-lg p-3">
+                <div class="text-2xl font-bold text-yellow-600">2</div>
+                <div class="text-xs text-gray-600">Member APIs</div>
+            </div>
+            <div class="bg-white rounded-lg p-3">
+                <div class="text-2xl font-bold text-red-600">33+</div>
+                <div class="text-xs text-gray-600">Total</div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <!-- Authentication -->
+    <div id="authentication" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Authentication</h2>
+        <p class="text-gray-600 mb-4">All API requests require token-based authentication.</p>
+        
+        <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-sm">
+            <div class="text-gray-400">// Request Header</div>
+            <div class="text-green-400">Authorization: Token YOUR_API_TOKEN</div>
+        </div>
+        
+        <div class="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-start space-x-3">
+                <i class="fas fa-exclamation-triangle text-yellow-600 mt-1"></i>
+                <div>
+                    <p class="font-medium text-yellow-900">Security Note</p>
+                    <p class="text-sm text-yellow-800 mt-1">Keep your API token secure. Do not commit it to version control.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Promotions API -->
+    <div id="promotions-api" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Get Promotions for Store</h2>
+        
+        <div class="space-y-4">
+            <!-- Endpoint -->
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">Endpoint</p>
+                <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-sm">
+                    <span class="text-blue-400">GET</span> /api/v1/sync/promotions/
+                </div>
+            </div>
+
+            <!-- Query Parameters -->
+            <div>
+                <p class="text-sm font-medium text-gray-700 mb-2">Query Parameters</p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Parameter</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Required</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-mono text-purple-600">store_id</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">UUID</td>
+                                <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Required</span></td>
+                                <td class="px-4 py-3 text-sm text-gray-600">Store UUID to get promotions for</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-mono text-purple-600">company_id</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">UUID</td>
+                                <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Required</span></td>
+                                <td class="px-4 py-3 text-sm text-gray-600">Company UUID</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-mono text-purple-600">brand_id</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">UUID</td>
+                                <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">Optional</span></td>
+                                <td class="px-4 py-3 text-sm text-gray-600">Brand UUID to filter promotions</td>
+                            </tr>
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-mono text-purple-600">updated_since</td>
+                                <td class="px-4 py-3 text-sm text-gray-600">ISO DateTime</td>
+                                <td class="px-4 py-3 text-sm"><span class="px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">Optional</span></td>
+                                <td class="px-4 py-3 text-sm text-gray-600">Only return promotions updated after this timestamp (for incremental sync)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Example Request -->
+            <div id="examples">
+                <p class="text-sm font-medium text-gray-700 mb-2">Example Request</p>
+                <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                    <div class="text-gray-400">// Full sync (all promotions)</div>
+                    <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/promotions/ \</div>
+                    <div class="text-green-400 pl-4">?store_id={% if sample_store %}{{ sample_store.id }}{% else %}YOUR_STORE_UUID{% endif %} \</div>
+                    <div class="text-green-400 pl-4">&company_id={{ request.user.company.id }}" \</div>
+                    <div class="text-green-400 pl-4">-H "Authorization: Token YOUR_API_TOKEN"</div>
+                    <br>
+                    <div class="text-gray-400">// Incremental sync (only updated promotions)</div>
+                    <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/promotions/ \</div>
+                    <div class="text-green-400 pl-4">?store_id={% if sample_store %}{{ sample_store.id }}{% else %}YOUR_STORE_UUID{% endif %} \</div>
+                    <div class="text-green-400 pl-4">&company_id={{ request.user.company.id }} \</div>
+                    <div class="text-green-400 pl-4">&updated_since=2026-01-27T10:00:00Z" \</div>
+                    <div class="text-green-400 pl-4">-H "Authorization: Token YOUR_API_TOKEN"</div>
+                </div>
+            </div>
+
+            <!-- Response Format -->
+            <div id="response-format">
+                <p class="text-sm font-medium text-gray-700 mb-2">Response Format</p>
+                <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                    <pre class="text-green-400">{
+  "promotions": [
+    {
+      "id": "uuid",
+      "code": "WEEKEND20",
+      "name": "Weekend Special 20% Off",
+      "promo_type": "percent_discount",
+      "is_active": true,
+      "validity": {
+        "start_date": "2026-02-01",
+        "end_date": "2026-02-28",
+        "days_of_week": [6, 7]
+      },
+      "scope": {
+        "apply_to": "category",
+        "categories": [
+          {
+            "id": "cat-uuid",
+            "name": "Beverages",
+            "code": "BEV"
+          }
+        ]
+      },
+      "rules": {
+        "type": "percent",
+        "discount_percent": 20.0,
+        "max_discount_amount": 50000.0
+      },
+      "compiled_at": "2026-01-27T10:00:00+07:00"
+    }
+  ],
+  "deleted_ids": [],
+  "sync_timestamp": "2026-01-27T10:00:00+07:00",
+  "total": 1
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Handling -->
+    <div id="error-handling" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Error Handling</h2>
+        
+        <div class="space-y-4">
+            <div>
+                <h3 class="font-medium text-gray-900 mb-2">HTTP Status Codes</h3>
+                <div class="space-y-2">
+                    <div class="flex items-start space-x-3">
+                        <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-mono">200</span>
+                        <span class="text-sm text-gray-600">Success - Promotions returned successfully</span>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-mono">400</span>
+                        <span class="text-sm text-gray-600">Bad Request - Missing required parameters</span>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-mono">401</span>
+                        <span class="text-sm text-gray-600">Unauthorized - Invalid or missing token</span>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-mono">404</span>
+                        <span class="text-sm text-gray-600">Not Found - Store not found</span>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-mono">500</span>
+                        <span class="text-sm text-gray-600">Server Error - Internal server error</span>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="font-medium text-gray-900 mb-2">Error Response Format</h3>
+                <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-sm">
+                    <pre class="text-red-400">{
+  "error": "Store not found",
+  "code": "STORE_NOT_FOUND",
+  "timestamp": "2026-01-27T10:00:00Z"
+}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Testing -->
+    <div id="testing" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">Testing the API</h2>
+        
+        <div class="space-y-4">
+            <p class="text-gray-600">Use the following tools to test the API:</p>
+            
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-900 mb-2 flex items-center space-x-2">
+                        <i class="fas fa-terminal text-purple-600"></i>
+                        <span>cURL</span>
+                    </h3>
+                    <p class="text-sm text-gray-600">Command-line testing with cURL (examples above)</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-900 mb-2 flex items-center space-x-2">
+                        <i class="fas fa-satellite text-blue-600"></i>
+                        <span>Postman</span>
+                    </h3>
+                    <p class="text-sm text-gray-600">Import API collection for visual testing</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-900 mb-2 flex items-center space-x-2">
+                        <i class="fas fa-code text-green-600"></i>
+                        <span>Python</span>
+                    </h3>
+                    <p class="text-sm text-gray-600">Use requests library for integration testing</p>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <h3 class="font-medium text-gray-900 mb-2 flex items-center space-x-2">
+                        <i class="fas fa-browser text-orange-600"></i>
+                        <span>Browser</span>
+                    </h3>
+                    <p class="text-sm text-gray-600">View JSON directly in browser (requires token)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Master Data APIs Section -->
+    <div id="master-data-api" class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">🏢 Master Data REST APIs</h2>
+        <p class="text-gray-600 mb-6">Standard REST API untuk sync semua master data dari HO ke Edge Server. Gunakan <code class="bg-gray-800 text-green-400 px-2 py-1 rounded text-sm">/api/v1/</code> untuk semua master data.</p>
+        
+        <!-- Core APIs -->
+        <div id="core-api" class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <span class="text-2xl mr-2">🏢</span> Core Master Data (Companies, Brands, Stores, Users)
+            </h3>
+            
+            <!-- NEW: Sync API Endpoints (Optimized for Edge) -->
+            <div class="bg-purple-50 rounded-lg p-4 mb-4 border border-purple-200">
+                <h4 class="font-semibold text-purple-900 mb-2">🔄 Sync API (Recommended for Edge Server)</h4>
+                <p class="text-sm text-gray-700 mb-3"><strong>Base URL:</strong> <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/</code></p>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm bg-white rounded">
+                        <thead class="bg-purple-100">
+                            <tr>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-purple-900 uppercase">Method</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-purple-900 uppercase">Endpoint</th>
+                                <th class="px-3 py-2 text-left text-xs font-medium text-purple-900 uppercase">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-3 py-2 font-semibold text-green-600">GET</td>
+                                <td class="px-3 py-2 font-mono text-xs text-purple-600">/api/v1/sync/companies/</td>
+                                <td class="px-3 py-2 text-gray-600">List all active companies</td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-3 py-2 font-semibold text-green-600">GET</td>
+                                <td class="px-3 py-2 font-mono text-xs text-purple-600">/api/v1/sync/brands/?company_id={uuid}</td>
+                                <td class="px-3 py-2 text-gray-600">List brands by company</td>
+                            </tr>
+                            <tr>
+                                <td class="px-3 py-2 font-semibold text-green-600">GET</td>
+                                <td class="px-3 py-2 font-mono text-xs text-purple-600">/api/v1/sync/stores/?brand_id={uuid}</td>
+                                <td class="px-3 py-2 text-gray-600">List stores by brand</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-3 p-3 bg-white rounded border border-purple-200">
+                    <p class="text-xs text-gray-600"><strong>💡 Note:</strong> These endpoints return optimized JSON with hierarchical relationships included. Perfect for initial setup and configuration sync.</p>
+                </div>
+                
+                <!-- API Examples for Master Data -->
+                <div class="mt-4 space-y-4">
+                    <h5 class="font-semibold text-gray-900">📝 Example Requests</h5>
+                    
+                    <!-- GET Companies Example -->
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">1. Get All Companies</p>
+                        <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/companies/" \</div>
+                            <div class="text-green-400 pl-4">-H "Authorization: Token YOUR_API_TOKEN"</div>
+                        </div>
+                        <div class="mt-2 bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-gray-400">// Response:</div>
+                            <pre class="text-green-400">{
+  "companies": [
+    {
+      "id": "uuid-company-1",
+      "code": "YGY",
+      "name": "Yogya Group",
+      "timezone": "Asia/Jakarta",
+      "is_active": true,
+      "point_expiry_months": 12,
+      "points_per_currency": "1.00",
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "sync_timestamp": "2026-01-27T10:00:00Z"
+}</pre>
+                        </div>
+                    </div>
+                    
+                    <!-- GET Brands Example -->
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">2. Get Brands by Company</p>
+                        <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/brands/?company_id=uuid-company-1" \</div>
+                            <div class="text-green-400 pl-4">-H "Authorization: Token YOUR_API_TOKEN"</div>
+                        </div>
+                        <div class="mt-2 bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-gray-400">// Response:</div>
+                            <pre class="text-green-400">{
+  "brands": [
+    {
+      "id": "uuid-brand-1",
+      "company_id": "uuid-company-1",
+      "company_code": "YGY",
+      "company_name": "Yogya Group",
+      "code": "YGY-001",
+      "name": "Ayam Geprek Express",
+      "address": "Jl. Contoh No. 123",
+      "phone": "021-1234567",
+      "tax_id": "01.234.567.8-901.000",
+      "tax_rate": "11.00",
+      "service_charge": "5.00",
+      "point_expiry_months_override": null,
+      "point_expiry_months": 12,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "company": {
+    "id": "uuid-company-1",
+    "code": "YGY",
+    "name": "Yogya Group"
+  },
+  "sync_timestamp": "2026-01-27T10:00:00Z"
+}</pre>
+                        </div>
+                    </div>
+                    
+                    <!-- GET Stores Example -->
+                    <div>
+                        <p class="text-sm font-medium text-gray-700 mb-2">3. Get Stores by Brand</p>
+                        <div class="bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/sync/stores/?brand_id=uuid-brand-1" \</div>
+                            <div class="text-green-400 pl-4">-H "Authorization: Token YOUR_API_TOKEN"</div>
+                        </div>
+                        <div class="mt-2 bg-gray-900 text-white rounded-lg p-4 font-mono text-xs overflow-x-auto">
+                            <div class="text-gray-400">// Response:</div>
+                            <pre class="text-green-400">{
+  "stores": [
+    {
+      "id": "uuid-store-1",
+      "brand_id": "uuid-brand-1",
+      "brand_code": "YGY-001",
+      "brand_name": "Ayam Geprek Express",
+      "company_id": "uuid-company-1",
+      "company_code": "YGY",
+      "company_name": "Yogya Group",
+      "store_code": "YGY-001-BSD",
+      "store_name": "Cabang BSD",
+      "address": "Jl. BSD Raya No. 123",
+      "phone": "021-7654321",
+      "timezone": "Asia/Jakarta",
+      "latitude": "-6.302100",
+      "longitude": "106.652900",
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00Z",
+      "updated_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "total": 1,
+  "brand": {
+    "id": "uuid-brand-1",
+    "code": "YGY-001",
+    "name": "Ayam Geprek Express",
+    "company_id": "uuid-company-1",
+    "company_code": "YGY",
+    "company_name": "Yogya Group"
+  },
+  "sync_timestamp": "2026-01-27T10:00:00Z"
+}</pre>
+                        </div>
+                    </div>
+                    
+                    <!-- Usage Pattern -->
+                    <div class="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h5 class="font-semibold text-blue-900 mb-2">🔄 Typical Sync Flow for Edge Server</h5>
+                        <ol class="text-sm text-gray-700 space-y-2 list-decimal list-inside">
+                            <li><strong>Initial Setup:</strong> GET /api/v1/sync/companies/ → Get all companies</li>
+                            <li><strong>Select Company:</strong> User selects company from dropdown</li>
+                            <li><strong>Load Brands:</strong> GET /api/v1/sync/brands/?company_id={uuid} → Get brands for selected company</li>
+                            <li><strong>Select Brand:</strong> User selects brand from dropdown</li>
+                            <li><strong>Load Stores:</strong> GET /api/v1/sync/stores/?brand_id={uuid} → Get stores for selected brand</li>
+                            <li><strong>Select Store:</strong> User selects store (this becomes the Edge Server identity)</li>
+                            <li><strong>Sync Data:</strong> Use store_id to sync promotions, products, etc.</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Standard REST API Endpoints -->
+            <div class="bg-blue-50 rounded-lg p-4 mb-3">
+                <h4 class="font-semibold text-blue-900 mb-2">📋 Standard REST API</h4>
+                <p class="text-sm text-gray-700"><strong>Base URL:</strong> <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">{{ request.scheme }}://{{ request.get_host }}/api/v1/core/</code></p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Resource</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Endpoint</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr><td class="px-3 py-2 font-semibold">Companies</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /companies/</td><td class="px-3 py-2 text-gray-600">List all companies</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Companies Sync</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /companies/sync/?last_sync={iso}</td><td class="px-3 py-2 text-gray-600">Incremental sync</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Brands</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /brands/</td><td class="px-3 py-2 text-gray-600">List all brands</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Brands Sync</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /brands/sync/?brand_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync specific brand</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Stores</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /stores/</td><td class="px-3 py-2 text-gray-600">List all stores</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Stores Sync</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /stores/sync/?store_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync specific store</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Users</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /users/</td><td class="px-3 py-2 text-gray-600">List all users</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Users Sync</td><td class="px-3 py-2 font-mono text-xs text-blue-600">GET /users/sync/?brand_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync users for brand</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Product APIs -->
+        <div id="product-api" class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                <span class="text-2xl mr-2">🍔</span> Product Master Data (Categories, Products, Modifiers)
+            </h3>
+            <div class="bg-green-50 rounded-lg p-4 mb-3">
+                <p class="text-sm text-gray-700"><strong>Base URL:</strong> <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">{{ request.scheme }}://{{ request.get_host }}/api/v1/products/</code></p>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Resource</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Endpoint</th>
+                            <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr><td class="px-3 py-2 font-semibold">Categories</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /categories/</td><td class="px-3 py-2 text-gray-600">List all categories</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Categories Sync</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /categories/sync/?brand_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync categories</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Products</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /products/?brand={uuid}</td><td class="px-3 py-2 text-gray-600">List products</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Products Sync</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /products/sync/?brand_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync products</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Modifiers</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /modifiers/?brand={uuid}</td><td class="px-3 py-2 text-gray-600">List modifiers</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Modifiers Sync</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /modifiers/sync/?brand_id={uuid}</td><td class="px-3 py-2 text-gray-600">Sync modifiers</td></tr>
+                        <tr><td class="px-3 py-2 font-semibold">Table Areas</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /table-areas/?brand={uuid}</td><td class="px-3 py-2 text-gray-600">List table areas</td></tr>
+                        <tr class="bg-gray-50"><td class="px-3 py-2 font-semibold">Kitchen Stations</td><td class="px-3 py-2 font-mono text-xs text-green-600">GET /kitchen-stations/?brand={uuid}</td><td class="px-3 py-2 text-gray-600">List stations</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Example Master Data Request -->
+        <div class="bg-gray-50 rounded-lg p-4">
+            <p class="text-sm font-medium text-gray-700 mb-2">💡 Example: Sync Products</p>
+            <div class="bg-gray-900 text-white rounded-lg p-3 font-mono text-xs overflow-x-auto">
+                <div class="text-gray-400">// Incremental sync products</div>
+                <div class="text-green-400">curl -X GET "{{ request.scheme }}://{{ request.get_host }}/api/v1/products/products/sync/ \</div>
+                <div class="text-green-400 pl-4">?brand_id=YOUR_BRAND_UUID \</div>
+                <div class="text-green-400 pl-4">&store_id=YOUR_STORE_UUID \</div>
+                <div class="text-green-400 pl-4">&last_sync=2026-01-27T10:00:00Z" \</div>
+                <div class="text-green-400 pl-4">-H "Authorization: Bearer YOUR_JWT_TOKEN"</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documentation Links -->
+    <div class="bg-gradient-to-r from-purple-100 to-blue-100 rounded-lg p-6 border border-purple-200">
+        <h2 class="text-xl font-semibold text-gray-900 mb-4">📚 Complete Documentation</h2>
+        <p class="text-gray-700 mb-4">Untuk dokumentasi lengkap dengan examples, testing guide, dan Postman collection:</p>
+        <div class="grid md:grid-cols-2 gap-3 text-sm">
+            <div class="bg-white rounded-lg p-3 border border-purple-200">
+                <div class="font-bold text-gray-900 mb-1">⭐ COMPLETE_EDGE_SERVER_API_GUIDE.md</div>
+                <div class="text-gray-600">Complete API reference untuk semua 30+ endpoints</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-blue-200">
+                <div class="font-bold text-gray-900 mb-1">📋 API_QUICK_REFERENCE.md</div>
+                <div class="text-gray-600">Quick reference card dengan copy-paste commands</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-green-200">
+                <div class="font-bold text-gray-900 mb-1">🧪 EDGE_SERVER_TESTING_SUMMARY.md</div>
+                <div class="text-gray-600">Testing checklist dan scenarios</div>
+            </div>
+            <div class="bg-white rounded-lg p-3 border border-yellow-200">
+                <div class="font-bold text-gray-900 mb-1">📦 SYNC_API_POSTMAN_COLLECTION.json</div>
+                <div class="text-gray-600">Import ke Postman untuk instant testing</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Support -->
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-6">
+        <h3 class="font-semibold text-purple-900 mb-3">🆘 Need Help?</h3>
+        <div class="space-y-2 text-sm text-purple-800">
+            <p><strong>Dashboard:</strong> <a href="{% url 'promotion:compiler_dashboard' %}" class="underline">Promotion Compiler Dashboard</a></p>
+            <p><strong>Total APIs:</strong> 30+ endpoints tersedia (5 Promotion APIs + 25+ Master Data APIs)</p>
+            <p><strong>Quick Start:</strong> Baca <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">API_QUICK_REFERENCE.md</code> untuk mulai testing</p>
+            <p><strong>Authentication:</strong> Gunakan JWT token dari <code class="bg-gray-800 text-green-400 px-2 py-1 rounded">POST /api/token/</code></p>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

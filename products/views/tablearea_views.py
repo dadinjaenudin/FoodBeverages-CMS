@@ -19,8 +19,18 @@ def tablearea_list(request):
     brand_id = request.GET.get('brand', '')
     page = request.GET.get('page', 1)
     
-    # Base queryset
-    tableareas = TableArea.objects.select_related('brand')
+    # Base queryset with filters from global context
+    tableareas = TableArea.objects.select_related('brand', 'store', 'company')
+    
+    # Apply global filters
+    if hasattr(request, 'current_company') and request.current_company:
+        tableareas = tableareas.filter(company=request.current_company)
+    
+    if hasattr(request, 'current_brand') and request.current_brand:
+        tableareas = tableareas.filter(brand=request.current_brand)
+    
+    if hasattr(request, 'current_store') and request.current_store:
+        tableareas = tableareas.filter(store=request.current_store)
     
     # Apply search
     if search:
@@ -63,32 +73,54 @@ def tablearea_create(request):
     """Create new table area"""
     if request.method == 'POST':
         try:
-            brand_id = request.POST.get('brand_id')
+            # Get company, brand, store from global filter (middleware)
+            if not hasattr(request, 'current_company') or not request.current_company:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No company selected. Please select a company from the global filter.'
+                }, status=400)
+            
+            if not hasattr(request, 'current_brand') or not request.current_brand:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No brand selected. Please select a brand from the global filter.'
+                }, status=400)
+            
+            if not hasattr(request, 'current_store') or not request.current_store:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'No store selected. Please select a store from the global filter. Table areas must be store-specific.'
+                }, status=400)
+            
             name = request.POST.get('name', '').strip()
+            description = request.POST.get('description', '').strip()
             sort_order = request.POST.get('sort_order', '0')
             is_active = request.POST.get('is_active') == 'on'
             
-            if not brand_id or not name:
+            if not name:
                 return JsonResponse({
                     'success': False,
-                    'message': 'Brand and Name are required'
+                    'message': 'Name is required'
                 }, status=400)
             
-            # Create table area
+            # Create table area using global filter context
             tablearea = TableArea.objects.create(
-                brand_id=brand_id,
+                company=request.current_company,
+                brand=request.current_brand,
+                store=request.current_store,
                 name=name,
+                description=description,
                 sort_order=int(sort_order) if sort_order else 0,
                 is_active=is_active
             )
             
             messages.success(request, f'Table Area "{tablearea.name}" created successfully!')
             
-            return JsonResponse({
-                'success': True,
-                'message': 'Table Area created successfully',
-                'redirect': '/products/tableareas/'
-            })
+            # Use HTMX redirect header for proper HTMX handling
+            from django.http import HttpResponse
+            response = HttpResponse(status=200)
+            response['HX-Redirect'] = '/products/tableareas/enhanced/'
+            return response
             
         except Exception as e:
             return JsonResponse({
@@ -96,12 +128,8 @@ def tablearea_create(request):
                 'message': str(e)
             }, status=500)
     
-    # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    
-    return render(request, 'products/tablearea/_form.html', {
-        'brands': brands
-    })
+    # GET request - return form (store comes from global filter context)
+    return render(request, 'products/tablearea/_form.html')
 
 
 @login_required
@@ -113,6 +141,7 @@ def tablearea_update(request, pk):
     if request.method == 'POST':
         try:
             name = request.POST.get('name', '').strip()
+            description = request.POST.get('description', '').strip()
             sort_order = request.POST.get('sort_order', '0')
             is_active = request.POST.get('is_active') == 'on'
             
@@ -124,17 +153,13 @@ def tablearea_update(request, pk):
             
             # Update table area
             tablearea.name = name
+            tablearea.description = description
             tablearea.sort_order = int(sort_order) if sort_order else 0
             tablearea.is_active = is_active
             tablearea.save()
             
-            messages.success(request, f'Table Area "{tablearea.name}" updated successfully!')
-            
-            return JsonResponse({
-                'success': True,
-                'message': 'Table Area updated successfully',
-                'redirect': '/products/tableareas/'
-            })
+            from django.shortcuts import redirect
+            return redirect('/products/tableareas/enhanced/')
             
         except Exception as e:
             return JsonResponse({
@@ -142,12 +167,9 @@ def tablearea_update(request, pk):
                 'message': str(e)
             }, status=500)
     
-    # GET request - return form
-    brands = Brand.objects.filter(is_active=True).order_by('name')
-    
-    return render(request, 'products/tablearea/_form.html', {
-        'tablearea': tablearea,
-        'brands': brands
+    # GET request - return form (store comes from global filter context)
+    return render(request, 'products/tablearea/edit.html', {
+        'tablearea': tablearea
     })
 
 

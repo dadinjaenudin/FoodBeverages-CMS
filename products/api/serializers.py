@@ -4,7 +4,7 @@ Products API Serializers - For HO → Edge Sync
 from rest_framework import serializers
 from products.models import (
     Category, Product, ProductPhoto, Modifier, ModifierOption,
-    ProductModifier, TableArea, Table, KitchenStation, PrinterConfig
+    ProductModifier, TableArea, Tables, KitchenStation, PrinterConfig
 )
 
 
@@ -30,7 +30,7 @@ class ModifierOptionSerializer(serializers.ModelSerializer):
 
 
 class ModifierSerializer(serializers.ModelSerializer):
-    options = ModifierOptionSerializer(many=True, read_only=True, source='modifieroption_set')
+    options = ModifierOptionSerializer(many=True, read_only=True)
     
     class Meta:
         model = Modifier
@@ -47,8 +47,8 @@ class ProductModifierSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    photos = ProductPhotoSerializer(many=True, read_only=True, source='productphoto_set')
-    modifiers = ProductModifierSerializer(many=True, read_only=True, source='productmodifier_set')
+    photos = ProductPhotoSerializer(many=True, read_only=True)
+    modifiers = ProductModifierSerializer(many=True, read_only=True, source='product_modifiers')
     category_name = serializers.CharField(source='category.name', read_only=True)
     
     class Meta:
@@ -68,7 +68,7 @@ class TableSerializer(serializers.ModelSerializer):
     area_name = serializers.CharField(source='area.name', read_only=True)
     
     class Meta:
-        model = Table
+        model = Tables
         fields = ['id', 'area', 'area_name', 'number', 'capacity', 'qr_code', 'pos_x', 'pos_y']
         # Note: status and table_group_id are managed by Edge, not synced from HO
 

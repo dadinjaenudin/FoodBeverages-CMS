@@ -1,0 +1,114 @@
+<!-- Benefit Brand Selector Modal -->
+<div x-show="showBenefitBrandModal" 
+     x-cloak
+     @keydown.escape.window="showBenefitBrandModal = false"
+     class="fixed inset-0 z-50 overflow-y-auto" 
+     aria-labelledby="modal-title" 
+     role="dialog" 
+     aria-modal="true">
+    
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+         @click="showBenefitBrandModal = false"></div>
+    
+    <!-- Modal Content -->
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-3xl"
+             @click.away="showBenefitBrandModal = false">
+            
+            <!-- Modal Header -->
+            <div class="bg-blue-600 px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-award text-white text-lg mr-2"></i>
+                    <h3 class="text-lg font-semibold text-white" id="modal-title">
+                        Select Benefit Brands
+                    </h3>
+                </div>
+                <button @click="showBenefitBrandModal = false" 
+                        class="text-white hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="bg-white px-4 py-4">
+                
+                <div class="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Benefit Brands:</strong> Select brands where customers will receive discounts or rewards
+                </div>
+                
+                <!-- Search & Stats -->
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="flex-1">
+                        <input type="text" 
+                               x-model="modalBenefitBrandSearch"
+                               placeholder="Search brands..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               autofocus>
+                    </div>
+                    <div class="text-sm text-gray-600 whitespace-nowrap">
+                        <span x-text="benefitBrandCount"></span> selected
+                    </div>
+                </div>
+                
+                <!-- Select All / Deselect All -->
+                <div class="mb-3 flex items-center gap-4 text-sm">
+                    <button type="button"
+                            @click="selectAllBenefitBrands()"
+                            class="text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fas fa-check-square mr-1"></i> Select All
+                    </button>
+                    <button type="button"
+                            @click="deselectAllBenefitBrands()"
+                            class="text-red-600 hover:text-red-800 font-medium">
+                        <i class="fas fa-square mr-1"></i> Deselect All
+                    </button>
+                </div>
+                
+                <!-- Brand List (Scrollable) -->
+                <div class="border border-gray-300 rounded-lg overflow-hidden">
+                    <div class="max-h-96 overflow-y-auto p-3 space-y-2">
+                        {% if company_brands %}
+                            {% for brand in company_brands %}
+                            <div class="flex items-center p-2 hover:bg-gray-50 rounded transition-colors" 
+                                 x-show="!modalBenefitBrandSearch || '{{ brand.name|lower }}'.includes(modalBenefitBrandSearch.toLowerCase())">
+                                <input type="checkbox" 
+                                       name="benefit_brands" 
+                                       value="{{ brand.id }}" 
+                                       id="benefit_brand_{{ brand.id }}"
+                                       {% if promotion and brand in promotion.benefit_brands.all %}checked{% endif %}
+                                       @change="updateBenefitBrandCount()"
+                                       class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <label for="benefit_brand_{{ brand.id }}" class="ml-3 text-sm text-gray-700 cursor-pointer flex-1">
+                                    <span class="font-medium">{{ brand.name }}</span>
+                                    <span class="text-xs text-gray-500 ml-2">({{ brand.code }})</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-sm text-gray-500 italic text-center py-4">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                No brands available in this company.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 px-4 py-3 flex justify-end gap-3">
+                <button type="button"
+                        @click="showBenefitBrandModal = false"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button"
+                        @click="showBenefitBrandModal = false"
+                        class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-check mr-1"></i> Done (<span x-text="benefitBrandCount"></span>)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

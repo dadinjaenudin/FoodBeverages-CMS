@@ -1,0 +1,133 @@
+<!-- Product Selector Modal -->
+<div x-show="showProductModal" 
+     x-cloak
+     @keydown.escape.window="showProductModal = false"
+     class="fixed inset-0 z-50 overflow-y-auto" 
+     aria-labelledby="modal-title" 
+     role="dialog" 
+     aria-modal="true">
+    
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+         @click="showProductModal = false"></div>
+    
+    <!-- Modal Content -->
+    <div class="flex min-h-full items-center justify-center p-4">
+        <div class="relative transform overflow-hidden rounded-lg bg-white shadow-xl transition-all w-full max-w-4xl"
+             @click.away="showProductModal = false">
+            
+            <!-- Modal Header -->
+            <div class="bg-blue-600 px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-box-open text-white text-lg mr-2"></i>
+                    <h3 class="text-lg font-semibold text-white" id="modal-title">
+                        Select Products
+                    </h3>
+                    {% if request.current_brand %}
+                    <span class="ml-3 text-xs text-blue-100">(Brand: {{ request.current_brand.name }})</span>
+                    {% endif %}
+                </div>
+                <button @click="showProductModal = false" 
+                        class="text-white hover:text-gray-200">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div class="bg-white px-4 py-4">
+                
+                <!-- Search & Stats -->
+                <div class="mb-4 flex items-center gap-3">
+                    <div class="flex-1">
+                        <input type="text" 
+                               x-model="modalProductSearch"
+                               placeholder="Search products by name..."
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               autofocus>
+                    </div>
+                    <div class="text-sm text-gray-600 whitespace-nowrap">
+                        <span x-text="selectedProductCount"></span> selected
+                    </div>
+                </div>
+                
+                <!-- Select All / Deselect All -->
+                <div class="mb-3 flex items-center gap-4 text-sm">
+                    <button type="button"
+                            @click="selectAllProducts()"
+                            class="text-blue-600 hover:text-blue-800 font-medium">
+                        <i class="fas fa-check-square mr-1"></i> Select All
+                    </button>
+                    <button type="button"
+                            @click="deselectAllProducts()"
+                            class="text-red-600 hover:text-red-800 font-medium">
+                        <i class="fas fa-square mr-1"></i> Deselect All
+                    </button>
+                </div>
+                
+                <!-- Product List (Scrollable) -->
+                <div class="border border-gray-300 rounded-lg overflow-hidden">
+                    <div class="max-h-96 overflow-y-auto p-3 space-y-2">
+                        {% if products %}
+                            {% for product in products %}
+                            <div class="flex items-center p-2 hover:bg-gray-50 rounded transition-colors" 
+                                 x-show="!modalProductSearch || '{{ product.name|lower }}'.includes(modalProductSearch.toLowerCase())">
+                                <input type="checkbox" 
+                                       name="products" 
+                                       value="{{ product.id }}" 
+                                       id="modal_product_{{ product.id }}"
+                                       {% if promotion and product in promotion.products.all %}checked{% endif %}
+                                       @change="updateSelectedCount()"
+                                       class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+                                <label for="modal_product_{{ product.id }}" class="ml-3 text-sm text-gray-700 cursor-pointer flex-1">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <span class="font-medium">{{ product.name }}</span>
+                                            <span class="text-xs text-blue-600 ml-2">{{ product.brand.name }}</span>
+                                            {% if product.category %}
+                                                <span class="text-xs text-gray-500 ml-1">/ {{ product.category.name }}</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if product.price %}
+                                            <span class="text-sm text-green-600 font-medium ml-2">Rp {{ product.price|floatformat:0 }}</span>
+                                        {% endif %}
+                                    </div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-sm text-gray-500 italic text-center py-4">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                No products available. Please create products first.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Info -->
+                <div class="mt-3 text-xs text-gray-600">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Products are filtered based on your current brand selection. Total available: {{ products|length }}
+                </div>
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="bg-gray-50 px-4 py-3 flex justify-end gap-3">
+                <button type="button"
+                        @click="showProductModal = false"
+                        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                    Cancel
+                </button>
+                <button type="button"
+                        @click="showProductModal = false"
+                        class="px-6 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-check mr-1"></i> Done (<span x-text="selectedProductCount"></span>)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add x-cloak style -->
+<style>
+    [x-cloak] { display: none !important; }
+</style>

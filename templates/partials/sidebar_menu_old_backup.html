@@ -1,0 +1,303 @@
+<!-- Dashboard -->
+<div>
+    <a href="{% url 'dashboard:index' %}" 
+       class="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 {% if request.resolver_match.url_name == 'index' %}bg-blue-700{% endif %}">
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-chart-line w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Dashboard</span>
+        </div>
+    </a>
+</div>
+
+<!-- User Management -->
+<div x-data="{ 
+    expanded: localStorage.getItem('menu_user') === 'true',
+    toggle() {
+        this.expanded = !this.expanded;
+        localStorage.setItem('menu_user', this.expanded);
+    }
+}">
+    <button 
+        type="button"
+        @click="toggle()"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 {% if 'user' in request.path %}bg-blue-700{% endif %}"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-users-cog w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">User Management</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
+        <!-- User List -->
+        <a href="{% url 'user:list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-users w-4"></i>
+            <span>All Users</span>
+        </a>
+    </div>
+</div>
+
+<!-- Initial Setup (Wajib Diisi Pertama) -->
+<div x-data="{ 
+    expanded: localStorage.getItem('menu_initial_setup') === 'true',
+    toggle() {
+        this.expanded = !this.expanded;
+        localStorage.setItem('menu_initial_setup', this.expanded);
+    }
+}" class="mt-2">
+    <button 
+        @click="toggle()"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 bg-blue-800"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-cog w-5 text-yellow-300"></i>
+            <span x-show="!$root.sidebarCollapsed" class="font-semibold">Initial Setup</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-yellow-400 pl-2">
+        <!-- Company -->
+        <a href="{% url 'company:list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-building w-5 text-blue-300"></i>
+            <span>1. Company</span>
+        </a>
+        
+        <!-- Brand -->
+        <a href="{% url 'brand:list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-tag w-5 text-indigo-300"></i>
+            <span>2. Brand</span>
+        </a>
+        
+        <!-- Store -->
+        <a href="{% url 'store:list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-store w-5 text-green-300"></i>
+            <span>3. Store</span>
+        </a>
+    </div>
+</div>
+
+<!-- Master Data (Level 1) -->
+<div x-data="{ 
+    expanded: localStorage.getItem('menu_master_data') === 'true',
+    toggle() {
+        this.expanded = !this.expanded;
+        localStorage.setItem('menu_master_data', this.expanded);
+    }
+}" class="mt-2">
+    <button 
+        @click="toggle()"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-database w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Master Data</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
+        
+        <!-- Product Catalog (Level 2 with submenu) -->
+        <div x-data="{ 
+            subExpanded: localStorage.getItem('menu_products') === 'true',
+            toggle() {
+                this.subExpanded = !this.subExpanded;
+                localStorage.setItem('menu_products', this.subExpanded);
+            }
+        }">
+            <button 
+                @click="toggle()"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-box w-5"></i>
+                    <span>Product Catalog</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'category:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-list w-4"></i>
+                    <span>Categories</span>
+                </a>
+                <a href="{% url 'product:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-pizza-slice w-4"></i>
+                    <span>Products</span>
+                </a>
+                <a href="{% url 'modifier:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-sliders w-4"></i>
+                    <span>Modifiers</span>
+                </a>
+                <a href="{% url 'tablearea:enhanced_list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-map-marker-alt w-4"></i>
+                    <span>Table Areas</span>
+                </a>
+                <a href="{% url 'kitchenstation:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-utensils w-4"></i>
+                    <span>Kitchen Stations</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Members -->
+        <a href="{% url 'member:list' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-users w-5"></i>
+            <span>Members</span>
+        </a>
+        
+        <!-- Promotions -->
+        <div x-data="{ 
+            subExpanded: localStorage.getItem('menu_promotions') === 'true',
+            toggle() {
+                this.subExpanded = !this.subExpanded;
+                localStorage.setItem('menu_promotions', this.subExpanded);
+            }
+        }">
+            <button 
+                @click="toggle()"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-gift w-5"></i>
+                    <span>Promotions</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'promotion:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-percent w-4"></i>
+                    <span>All Promotions</span>
+                </a>
+                <a href="#" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-layer-group w-4"></i>
+                    <span>Member Tiers</span>
+                </a>
+            </div>
+        </div>
+        
+        <!-- Inventory -->
+        <div x-data="{ 
+            subExpanded: localStorage.getItem('menu_inventory') === 'true',
+            toggle() {
+                this.subExpanded = !this.subExpanded;
+                localStorage.setItem('menu_inventory', this.subExpanded);
+            }
+        }">
+            <button 
+                @click="toggle()"
+                class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700 text-sm"
+            >
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-warehouse w-5"></i>
+                    <span>Inventory</span>
+                </div>
+                <i x-show="subExpanded" class="fas fa-chevron-down text-xs"></i>
+                <i x-show="!subExpanded" class="fas fa-chevron-right text-xs"></i>
+            </button>
+            
+            <!-- Level 3 -->
+            <div x-show="subExpanded" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-500 pl-2">
+                <a href="{% url 'inventoryitem:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-boxes w-4"></i>
+                    <span>Raw Materials</span>
+                </a>
+                <a href="{% url 'recipe:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-book w-4"></i>
+                    <span>Recipes (BOM)</span>
+                </a>
+                <a href="{% url 'stockmovement:list' %}" 
+                   class="flex items-center space-x-2 px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs">
+                    <i class="fas fa-exchange-alt w-4"></i>
+                    <span>Stock Movements</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reports & Analytics (Level 1) -->
+<div x-data="{ 
+    expanded: localStorage.getItem('menu_reports') === 'true',
+    toggle() {
+        this.expanded = !this.expanded;
+        localStorage.setItem('menu_reports', this.expanded);
+    }
+}" class="mt-2">
+    <button 
+        @click="toggle()"
+        class="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-blue-700"
+    >
+        <div class="flex items-center space-x-3">
+            <i class="fas fa-chart-bar w-5"></i>
+            <span x-show="!$root.sidebarCollapsed">Reports & Analytics</span>
+        </div>
+        <i x-show="!$root.sidebarCollapsed && expanded" class="fas fa-chevron-down text-xs"></i>
+        <i x-show="!$root.sidebarCollapsed && !expanded" class="fas fa-chevron-right text-xs"></i>
+    </button>
+    
+    <!-- Level 2 -->
+    <div x-show="expanded && !$root.sidebarCollapsed" x-cloak class="ml-4 mt-1 space-y-1 border-l-2 border-blue-600 pl-2">
+        <a href="{% url 'analytics:sales-report' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-cash-register w-5"></i>
+            <span>Sales Report</span>
+        </a>
+        <a href="{% url 'analytics:product-performance' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-shopping-cart w-5"></i>
+            <span>Product Performance</span>
+        </a>
+        <a href="{% url 'analytics:hourly-sales' %}" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm">
+            <i class="fas fa-clock w-5"></i>
+            <span>Hourly Sales</span>
+        </a>
+        <a href="#" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm opacity-50 cursor-not-allowed">
+            <i class="fas fa-user-chart w-5"></i>
+            <span>Member Analytics</span>
+        </a>
+        <a href="#" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm opacity-50 cursor-not-allowed">
+            <i class="fas fa-tags w-5"></i>
+            <span>Promotion Analysis</span>
+        </a>
+        <a href="#" 
+           class="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-blue-700 text-sm opacity-50 cursor-not-allowed">
+            <i class="fas fa-calculator w-5"></i>
+            <span>Inventory & COGS</span>
+        </a>
+    </div>
+</div>
+
+
+
+

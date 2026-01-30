@@ -1,0 +1,47 @@
+<!-- BOGO Configuration -->
+<div x-show="promoType === 'buy_x_get_y'" x-transition>
+    <div class="bg-white border border-gray-200 rounded-lg px-4 py-3">
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">
+            <i class="fas fa-gift text-blue-600 mr-2"></i>BOGO (Buy X Get Y)
+        </h3>
+        
+        <div class="grid grid-cols-2 gap-3">
+            <!-- Buy Quantity -->
+            <div>
+                <label for="id_buy_quantity" class="block text-xs font-medium text-gray-700 mb-1">
+                    Buy Quantity <span class="text-red-500">*</span>
+                </label>
+                <input type="number" 
+                       name="buy_quantity" 
+                       id="id_buy_quantity" 
+                       value="{{ promotion.buy_quantity|default:'0' }}" 
+                       min="0" 
+                       step="1"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">Items to buy</p>
+            </div>
+
+            <!-- Get Quantity -->
+            <div>
+                <label for="id_get_quantity" class="block text-xs font-medium text-gray-700 mb-1">
+                    Get Quantity (Free) <span class="text-red-500">*</span>
+                </label>
+                <input type="number" 
+                       name="get_quantity" 
+                       id="id_get_quantity" 
+                       value="{{ promotion.get_quantity|default:'0' }}" 
+                       min="0" 
+                       step="1"
+                       class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                <p class="mt-1 text-xs text-gray-500">Free items</p>
+            </div>
+        </div>
+        
+        <div class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+            <p class="text-xs text-blue-800">
+                <i class="fas fa-lightbulb mr-1"></i>
+                Example: Buy 2 Get 1 = Customer buys 2, gets 1 free
+            </p>
+        </div>
+    </div>
+</div>

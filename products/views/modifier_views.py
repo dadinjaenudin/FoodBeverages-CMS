@@ -19,10 +19,17 @@ def modifier_list(request):
     brand_id = request.GET.get('brand', '')
     page = request.GET.get('page', 1)
     
-    # Base queryset
-    modifiers = Modifier.objects.select_related('brand').annotate(
+    # Base queryset with global filters
+    modifiers = Modifier.objects.select_related('brand', 'brand__company').annotate(
         option_count=Count('options')
     )
+    
+    # Apply global filters first (from middleware)
+    if hasattr(request, 'current_company') and request.current_company:
+        modifiers = modifiers.filter(brand__company=request.current_company)
+    
+    if hasattr(request, 'current_brand') and request.current_brand:
+        modifiers = modifiers.filter(brand=request.current_brand)
     
     # Apply search
     if search:
@@ -31,7 +38,7 @@ def modifier_list(request):
             Q(brand__name__icontains=search)
         )
     
-    # Apply brand filter
+    # Apply URL parameter brand filter (override if specified)
     if brand_id:
         modifiers = modifiers.filter(brand_id=brand_id)
     

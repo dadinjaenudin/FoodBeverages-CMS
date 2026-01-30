@@ -26,8 +26,8 @@ class MemberRegistrationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Member
         fields = [
-            'company_id', 'name', 'email', 'phone', 'birth_date',
-            'gender', 'address', 'city', 'province', 'postal_code',
+            'company_id', 'full_name', 'email', 'phone', 'birth_date',
+            'gender', 'address', 'city', 'postal_code',
             'tier', 'created_by'
         ]
     
